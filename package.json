@@ -1,0 +1,22 @@
+{
+  "name": "sentinel-desk",
+  "private": true,
+  "version": "0.1.0",
+  "description": "SentinelDesk — enterprise customer support & SLA desk platform",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev:backend": "pnpm --filter @sentinel-desk/backend dev",
+    "dev:frontend": "pnpm --filter @sentinel-desk/frontend dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
+  },
+  "packageManager": "pnpm@9.12.0"
+}
