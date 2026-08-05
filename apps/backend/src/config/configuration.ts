@@ -5,7 +5,7 @@ export interface AppConfig {
   backendUrl: string;
   port: number;
   database: { url: string };
-  redis: { host: string; port: number; url: string };
+  redis: { host: string; port: number; password?: string; tls: boolean };
   jwt: {
     accessSecret: string;
     accessExpiresIn: string;
@@ -53,7 +53,8 @@ export default (): AppConfig => ({
   redis: {
     host: process.env.REDIS_HOST ?? 'localhost',
     port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
-    url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+    password: process.env.REDIS_PASSWORD || undefined,
+    tls: process.env.REDIS_TLS === 'true',
   },
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET ?? '',

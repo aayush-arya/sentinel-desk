@@ -1,0 +1,82 @@
+services:
+  - type: web
+    name: sentinel-desk-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: >-
+      corepack enable && corepack prepare pnpm@latest --activate &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @sentinel-desk/backend exec prisma generate &&
+      pnpm --filter @sentinel-desk/backend build
+    startCommand: >-
+      pnpm --filter @sentinel-desk/backend exec prisma migrate deploy &&
+      node apps/backend/dist/main.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_NAME
+        value: SentinelDesk
+      - key: BACKEND_PORT
+        value: 4000
+      # Set these in the Render dashboard (Environment tab) rather than here —
+      # they're secrets/per-provider values, not something to commit to git.
+      - key: FRONTEND_URL
+        sync: false
+      - key: BACKEND_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        sync: false
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_TLS
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: true
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: STORAGE_ENDPOINT
+        sync: false
+      - key: STORAGE_PORT
+        sync: false
+      - key: STORAGE_USE_SSL
+        sync: false
+      - key: STORAGE_ACCESS_KEY
+        sync: false
+      - key: STORAGE_SECRET_KEY
+        sync: false
+      - key: STORAGE_BUCKET
+        sync: false
+      - key: STORAGE_REGION
+        sync: false
+      - key: AI_PROVIDER
+        value: mock
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-5
+      - key: THROTTLE_TTL
+        value: 60
+      - key: THROTTLE_LIMIT
+        value: 100

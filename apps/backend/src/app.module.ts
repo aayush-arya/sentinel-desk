@@ -44,12 +44,17 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
     }),
     BullModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService<AppConfig, true>) => ({
-        connection: {
-          host: config.get('redis', { infer: true }).host,
-          port: config.get('redis', { infer: true }).port,
-        },
-      }),
+      useFactory: (config: ConfigService<AppConfig, true>) => {
+        const redis = config.get('redis', { infer: true });
+        return {
+          connection: {
+            host: redis.host,
+            port: redis.port,
+            password: redis.password,
+            tls: redis.tls ? {} : undefined,
+          },
+        };
+      },
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
