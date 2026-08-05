@@ -88,3 +88,127 @@ export const ROLE_LABELS: Record<RoleName, string> = {
   MANAGER: 'Manager',
   ADMIN: 'Admin',
 };
+
+// ── Tickets ────────────────────────────────────────────────────────────
+
+export type TicketStatus = 'OPEN' | 'PENDING' | 'ON_HOLD' | 'RESOLVED' | 'CLOSED';
+export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+export type CommentVisibility = 'PUBLIC' | 'INTERNAL';
+
+export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
+  OPEN: 'Open',
+  PENDING: 'Pending',
+  ON_HOLD: 'On hold',
+  RESOLVED: 'Resolved',
+  CLOSED: 'Closed',
+};
+
+export const TICKET_PRIORITY_LABELS: Record<TicketPriority, string> = {
+  LOW: 'Low',
+  MEDIUM: 'Medium',
+  HIGH: 'High',
+  URGENT: 'Urgent',
+};
+
+export interface TicketPerson {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl: string | null;
+}
+
+export interface TicketTagSummary {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface TicketSummary {
+  id: string;
+  number: number;
+  subject: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  requester: TicketPerson;
+  assignee: TicketPerson | null;
+  tags: TicketTagSummary[];
+  commentCount: number;
+  createdAt: string;
+  updatedAt: string;
+  firstResponseAt: string | null;
+  resolvedAt: string | null;
+}
+
+export interface TicketAttachment {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
+  createdAt: string;
+}
+
+export interface TicketComment {
+  id: string;
+  ticketId: string;
+  authorId: string;
+  visibility: CommentVisibility;
+  body: string;
+  createdAt: string;
+  editedAt: string | null;
+  author: TicketPerson & { roleId: string };
+  attachments: TicketAttachment[];
+}
+
+export interface TicketDetail {
+  id: string;
+  number: number;
+  subject: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  requester: TicketPerson;
+  assignee: TicketPerson | null;
+  tags: TicketTagSummary[];
+  comments: TicketComment[];
+  mergedInto: { id: string; number: number; subject: string } | null;
+  splitFrom: { id: string; number: number; subject: string } | null;
+  reopenedCount: number;
+  firstResponseAt: string | null;
+  resolvedAt: string | null;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  meta: { page: number; pageSize: number; total: number; totalPages: number };
+}
+
+export type TicketHistoryAction =
+  | 'CREATED'
+  | 'STATUS_CHANGED'
+  | 'PRIORITY_CHANGED'
+  | 'ASSIGNED'
+  | 'UNASSIGNED'
+  | 'TRANSFERRED'
+  | 'ESCALATED'
+  | 'TAG_ADDED'
+  | 'TAG_REMOVED'
+  | 'MERGED'
+  | 'MERGED_FROM'
+  | 'SPLIT'
+  | 'REOPENED'
+  | 'COMMENT_ADDED'
+  | 'NOTE_ADDED';
+
+export interface TicketHistoryEntry {
+  id: string;
+  ticketId: string;
+  actorId: string | null;
+  action: TicketHistoryAction;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  actor: { id: string; firstName: string; lastName: string; avatarUrl: string | null } | null;
+}

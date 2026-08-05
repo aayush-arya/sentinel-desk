@@ -105,6 +105,30 @@ export class UsersService {
     }));
   }
 
+  /**
+   * Any staff member needs to know who else is staff to assign/transfer/escalate
+   * tickets to — a narrower, less sensitive view than the full member directory,
+   * which stays admin/manager-only.
+   */
+  async listAssignableAgents(organizationId: string) {
+    const users = await this.prisma.user.findMany({
+      where: {
+        organizationId,
+        status: UserStatus.ACTIVE,
+        role: { name: { not: RoleName.CUSTOMER } },
+      },
+      include: { role: true },
+      orderBy: { firstName: 'asc' },
+    });
+    return users.map((u) => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      avatarUrl: u.avatarUrl,
+      role: u.role.name,
+    }));
+  }
+
   async inviteUser(
     inviterId: string,
     organizationId: string,

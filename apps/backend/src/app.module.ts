@@ -10,6 +10,7 @@ import { MailModule } from './mail/mail.module';
 import { StorageModule } from './storage/storage.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { TicketsModule } from './tickets/tickets.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -40,6 +41,7 @@ import { CsrfGuard } from './common/guards/csrf.guard';
     StorageModule,
     AuthModule,
     UsersModule,
+    TicketsModule,
     HealthModule,
   ],
   providers: [

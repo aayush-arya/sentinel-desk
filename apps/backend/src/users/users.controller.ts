@@ -58,6 +58,13 @@ export class UsersController {
     return this.usersService.listOrgMembers(user.organizationId);
   }
 
+  @Roles(RoleName.AGENT, RoleName.SENIOR_AGENT, RoleName.MANAGER, RoleName.ADMIN)
+  @Get('assignable')
+  @ApiOperation({ summary: 'List active staff members tickets can be assigned to' })
+  listAssignable(@CurrentUser() user: AuthenticatedUser) {
+    return this.usersService.listAssignableAgents(user.organizationId);
+  }
+
   @RequireCsrf()
   @RequirePermissions('user:invite')
   @Post('invite')

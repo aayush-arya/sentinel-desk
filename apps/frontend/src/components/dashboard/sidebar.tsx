@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, Monitor, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react';
+import { LayoutGrid, MessageSquare, Monitor, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react';
 import type { UserProfile } from '@sentinel-desk/types';
 import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
@@ -19,10 +19,11 @@ interface NavItem {
 function getNavItems(user: UserProfile): NavItem[] {
   const items: NavItem[] = [
     { href: '/dashboard', label: 'Overview', icon: LayoutGrid },
+    { href: '/dashboard/tickets', label: 'Tickets', icon: MessageSquare },
     { href: '/dashboard/sessions', label: 'Sessions', icon: Monitor },
   ];
   if (canManageTeam(user.role.name)) {
-    items.splice(1, 0, { href: '/dashboard/team', label: 'Team', icon: Users });
+    items.splice(2, 0, { href: '/dashboard/team', label: 'Team', icon: Users });
   }
   return items;
 }
@@ -55,7 +56,8 @@ export function DashboardSidebar({ user }: { user: UserProfile }) {
 
       <nav className="flex-1 space-y-1 p-3">
         {navItems.map((item) => {
-          const active = pathname === item.href;
+          const active =
+            item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
