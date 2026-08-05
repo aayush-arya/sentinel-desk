@@ -4,6 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import type { Queue } from 'bullmq';
 import {
   CommentVisibility,
   Prisma,
@@ -17,6 +19,8 @@ import { SlaService } from '../sla/sla.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
 import { sanitizeRichText } from '../common/utils/sanitize-html.util';
+import { AI_ENRICHMENT_QUEUE } from '../ai/ai.constants';
+import type { AiEnrichmentJobData } from '../ai/ai-enrichment.processor';
 import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import { isStaff } from './types/authenticated-request.type';
 import type { CreateTicketDto } from './dto/create-ticket.dto';
@@ -58,6 +62,7 @@ export class TicketsService {
     private readonly sla: SlaService,
     private readonly realtime: RealtimeGateway,
     private readonly notifications: NotificationsService,
+    @InjectQueue(AI_ENRICHMENT_QUEUE) private readonly aiQueue: Queue<AiEnrichmentJobData>,
   ) {}
 
   /** Tells anyone viewing this ticket, plus the org's list/dashboard views, to refresh. */
@@ -126,6 +131,7 @@ export class TicketsService {
     }
 
     this.realtime.emitToOrg(user.organizationId, 'ticket:created', { ticketId: ticket.created.id });
+    await this.aiQueue.add('ticket-created', { kind: 'ticket-created', ticketId: ticket.created.id });
 
     return this.findOne(user, ticket.created.id);
   }
@@ -165,7 +171,7 @@ export class TicketsService {
     ]);
 
     return {
-      items: items.map((t) => this.toTicketSummary(t)),
+      items: items.map((t) => this.toTicketSummary(t, isStaff(user))),
       meta: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
     };
   }
@@ -347,6 +353,11 @@ export class TicketsService {
           body: `${author.firstName} ${author.lastName} replied to "${ticket.subject}"`,
           ticketId,
         });
+      }
+
+      // Sentiment is only meaningful as a read on the customer, not on an agent's own tone.
+      if (!staff) {
+        await this.aiQueue.add('comment-sentiment', { kind: 'comment-sentiment', commentId: comment.id });
       }
     }
     this.broadcastTicketChanged(user.organizationId, ticketId);
@@ -642,7 +653,9 @@ export class TicketsService {
     }
   }
 
-  private toTicketSummary(ticket: Prisma.TicketGetPayload<{ include: typeof TICKET_LIST_INCLUDE }>) {
+  // AI suggestions are an internal triage aid, not a customer-facing fact — only
+  // included for staff, mirroring how INTERNAL comments are already kept staff-only.
+  private toTicketSummary(ticket: Prisma.TicketGetPayload<{ include: typeof TICKET_LIST_INCLUDE }>, staff: boolean) {
     return {
       id: ticket.id,
       number: ticket.number,
@@ -662,6 +675,8 @@ export class TicketsService {
       responseBreached: ticket.responseBreached,
       resolutionBreached: ticket.resolutionBreached,
       slaPausedAt: ticket.slaPausedAt,
+      aiSuggestedPriority: staff ? ticket.aiSuggestedPriority : null,
+      aiSuggestedTags: staff ? ticket.aiSuggestedTags : [],
     };
   }
 
@@ -694,6 +709,8 @@ export class TicketsService {
       slaPausedAt: ticket.slaPausedAt,
       createdAt: ticket.createdAt,
       updatedAt: ticket.updatedAt,
+      aiSuggestedPriority: staff ? ticket.aiSuggestedPriority : null,
+      aiSuggestedTags: staff ? ticket.aiSuggestedTags : [],
     };
   }
 }

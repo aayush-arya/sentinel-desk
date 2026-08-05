@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Tag as TagIcon, UserRound, X } from 'lucide-react';
+import { Sparkles, Tag as TagIcon, UserRound, X } from 'lucide-react';
 import type { TicketDetail, TicketPriority, TicketStatus } from '@sentinel-desk/types';
 import { TICKET_PRIORITY_LABELS, TICKET_STATUS_LABELS } from '@sentinel-desk/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { TicketPriorityBadge, TicketStatusBadge } from './ticket-badges';
 import { SlaCountdown } from './sla-countdown';
 import { useAssignableAgents } from '@/hooks/use-agents';
-import { useTags } from '@/hooks/use-tags';
+import { useTags, useCreateTag } from '@/hooks/use-tags';
 import { useAssignTicket, useUpdateTicket, useTicketTags } from '@/hooks/use-tickets';
 import { getApiErrorMessage } from '@/lib/api-client';
 
@@ -25,9 +25,24 @@ export function TicketSidebar({ ticket, isStaff }: { ticket: TicketDetail; isSta
   const { add: addTag, remove: removeTag } = useTicketTags(ticket.id);
   const { data: agents } = useAssignableAgents();
   const { data: allTags } = useTags();
+  const createTag = useCreateTag();
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
 
   const handleError = (error: unknown, fallback: string) => toast.error(getApiErrorMessage(error, fallback));
+
+  const suggestedTags = ticket.aiSuggestedTags.filter(
+    (name) => !ticket.tags.some((t) => t.name.toLowerCase() === name.toLowerCase()),
+  );
+
+  const acceptSuggestedTag = async (name: string) => {
+    try {
+      const existing = allTags?.find((t) => t.name.toLowerCase() === name.toLowerCase());
+      const tagId = existing ? existing.id : (await createTag.mutateAsync({ name })).id;
+      await addTag.mutateAsync(tagId);
+    } catch (error) {
+      handleError(error, 'Unable to add suggested tag');
+    }
+  };
 
   const showResponseCountdown = ticket.responseDueAt && !ticket.firstResponseAt;
   const showResolutionCountdown = ticket.resolutionDueAt && !ticket.resolvedAt;
@@ -102,6 +117,21 @@ export function TicketSidebar({ ticket, isStaff }: { ticket: TicketDetail; isSta
           </Select>
         ) : (
           <TicketPriorityBadge priority={ticket.priority} />
+        )}
+        {isStaff && ticket.aiSuggestedPriority && ticket.aiSuggestedPriority !== ticket.priority && (
+          <button
+            type="button"
+            onClick={() =>
+              updateTicket.mutate(
+                { priority: ticket.aiSuggestedPriority as TicketPriority },
+                { onError: (e) => handleError(e, 'Unable to update priority') },
+              )
+            }
+            className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Sparkles className="size-3" />
+            AI suggests {TICKET_PRIORITY_LABELS[ticket.aiSuggestedPriority]} · Apply
+          </button>
         )}
       </div>
 
@@ -201,6 +231,24 @@ export function TicketSidebar({ ticket, isStaff }: { ticket: TicketDetail; isSta
             </Popover>
           )}
         </div>
+        {isStaff && suggestedTags.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Sparkles className="size-3" />
+              Suggested:
+            </span>
+            {suggestedTags.map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => acceptSuggestedTag(name)}
+                className="rounded-full border border-dashed border-muted-foreground/40 px-2 py-0.5 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
+              >
+                + {name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>

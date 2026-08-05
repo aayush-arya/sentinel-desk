@@ -294,6 +294,12 @@ model Ticket {
   slaPausedAt        DateTime?
   slaEscalatedAt     DateTime?
 
+  // Advisory only, set once asynchronously right after creation (see
+  // ai/ai-enrichment.processor.ts) — never overwrites the real priority/tags an
+  // agent or the requester chose. Surfaced in the UI as a suggestion to accept or ignore.
+  aiSuggestedPriority TicketPriority?
+  aiSuggestedTags     String[]        @default([])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -326,6 +332,12 @@ enum CommentVisibility {
   INTERNAL
 }
 
+enum CommentSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
 model Comment {
   id         String            @id @default(uuid())
   ticketId   String
@@ -334,6 +346,10 @@ model Comment {
   body       String
   createdAt  DateTime          @default(now())
   editedAt   DateTime?
+
+  // Set asynchronously after creation (see ai/ai-enrichment.processor.ts) for
+  // PUBLIC comments from customers only — an agent's own tone isn't a useful signal.
+  sentiment CommentSentiment?
 
   ticket      Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   author      User         @relation(fields: [authorId], references: [id])

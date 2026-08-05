@@ -16,6 +16,7 @@ import { TicketsModule } from './tickets/tickets.module';
 import { SlaModule } from './sla/sla.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AiModule } from './ai/ai.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -61,6 +62,7 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
     SlaModule,
     RealtimeModule,
     NotificationsModule,
+    AiModule,
     HealthModule,
   ],
   providers: [

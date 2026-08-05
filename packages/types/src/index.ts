@@ -94,6 +94,7 @@ export const ROLE_LABELS: Record<RoleName, string> = {
 export type TicketStatus = 'OPEN' | 'PENDING' | 'ON_HOLD' | 'RESOLVED' | 'CLOSED';
 export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 export type CommentVisibility = 'PUBLIC' | 'INTERNAL';
+export type CommentSentiment = 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
 
 export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
   OPEN: 'Open',
@@ -143,6 +144,9 @@ export interface TicketSummary {
   responseBreached: boolean;
   resolutionBreached: boolean;
   slaPausedAt: string | null;
+  /** Advisory only, staff-visible only — null for customers and until enrichment completes. */
+  aiSuggestedPriority: TicketPriority | null;
+  aiSuggestedTags: string[];
 }
 
 export interface TicketAttachment {
@@ -162,6 +166,8 @@ export interface TicketComment {
   body: string;
   createdAt: string;
   editedAt: string | null;
+  /** Only ever set for customer-authored comments — see ai/ai.service.ts. */
+  sentiment: CommentSentiment | null;
   author: TicketPerson & { roleId: string };
   attachments: TicketAttachment[];
 }
@@ -189,6 +195,8 @@ export interface TicketDetail {
   slaPausedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  aiSuggestedPriority: TicketPriority | null;
+  aiSuggestedTags: string[];
 }
 
 export interface PaginatedResult<T> {
@@ -338,4 +346,26 @@ export interface TicketCommentNewEvent {
     createdAt: string;
     author: TicketPerson & { roleId: string };
   };
+}
+
+// ── AI assist ─────────────────────────────────────────────────────────
+
+export interface AiSummaryResponse {
+  summary: string | null;
+}
+
+export interface AiSuggestReplyResponse {
+  reply: string | null;
+}
+
+export interface AiDuplicateCandidate {
+  ticketId: string;
+  ticketNumber: number;
+  subject: string;
+  confidence: number;
+  reasoning: string;
+}
+
+export interface AiDuplicatesResponse {
+  candidates: AiDuplicateCandidate[];
 }

@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, Pencil, RotateCcw } from 'lucide-react';
+import { Copy, Loader2, Pencil, RotateCcw, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TicketComment, TicketCommentNewEvent, TicketDetail, TicketTypingEvent } from '@sentinel-desk/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTicket, useTicketHistory, useUpdateTicket, useReopenTicket, TICKET_KEY } from '@/hooks/use-tickets';
+import { useTicketSummary, useDuplicateCandidates } from '@/hooks/use-ai';
 import { useRealtime } from '@/lib/realtime-context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,6 +37,8 @@ export default function TicketDetailPage() {
   const { data: history } = useTicketHistory(params.id);
   const updateTicket = useUpdateTicket(params.id);
   const reopenTicket = useReopenTicket(params.id);
+  const summarize = useTicketSummary(params.id);
+  const duplicates = useDuplicateCandidates(params.id);
   const { socket } = useRealtime();
   const queryClient = useQueryClient();
 
@@ -42,6 +46,8 @@ export default function TicketDetailPage() {
   const [subjectDraft, setSubjectDraft] = useState('');
   const [typingUserIds, setTypingUserIds] = useState<Set<string>>(new Set());
   const typingTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const [showSummary, setShowSummary] = useState(false);
+  const [showDuplicates, setShowDuplicates] = useState(false);
 
   useEffect(() => {
     const ticketId = params.id;
@@ -73,6 +79,10 @@ export default function TicketDetailPage() {
           body: event.comment.body,
           createdAt: event.comment.createdAt,
           editedAt: null,
+          // Sentiment is computed asynchronously after creation (see ai.service.ts) —
+          // never available yet on this initial push; the eventual ticket:updated
+          // refetch fills it in once ready.
+          sentiment: null,
           author: event.comment.author,
           attachments: [],
         };
@@ -215,6 +225,92 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
+        {isStaff && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => {
+                setShowSummary(true);
+                summarize.mutate();
+              }}
+              disabled={summarize.isPending}
+            >
+              {summarize.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="size-3.5" />
+              )}
+              Summarize
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => {
+                setShowDuplicates(true);
+                duplicates.mutate();
+              }}
+              disabled={duplicates.isPending}
+            >
+              {duplicates.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Copy className="size-3.5" />}
+              Check duplicates
+            </Button>
+          </div>
+        )}
+
+        {showSummary && (
+          <Card className="space-y-1.5 p-3">
+            <div className="flex items-center justify-between">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Sparkles className="size-3.5" />
+                AI summary
+              </p>
+              <button type="button" onClick={() => setShowSummary(false)} aria-label="Dismiss summary">
+                <X className="size-3.5 text-muted-foreground" />
+              </button>
+            </div>
+            {summarize.isPending ? (
+              <Skeleton className="h-4 w-full" />
+            ) : (
+              <p className="text-sm">{summarize.data?.summary ?? 'No summary available yet.'}</p>
+            )}
+          </Card>
+        )}
+
+        {showDuplicates && (
+          <Card className="space-y-1.5 p-3">
+            <div className="flex items-center justify-between">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Copy className="size-3.5" />
+                Possible duplicates
+              </p>
+              <button type="button" onClick={() => setShowDuplicates(false)} aria-label="Dismiss duplicates">
+                <X className="size-3.5 text-muted-foreground" />
+              </button>
+            </div>
+            {duplicates.isPending ? (
+              <Skeleton className="h-4 w-full" />
+            ) : duplicates.data?.candidates.length ? (
+              <ul className="space-y-1.5">
+                {duplicates.data.candidates.map((c) => (
+                  <li key={c.ticketId} className="flex items-center justify-between gap-2 text-sm">
+                    <Link href={`/dashboard/tickets/${c.ticketId}`} className="truncate hover:underline">
+                      #{c.ticketNumber} {c.subject}
+                    </Link>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {Math.round(c.confidence * 100)}% match
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No likely duplicates found among recent open tickets.</p>
+            )}
+          </Card>
+        )}
+
         <Tabs defaultValue="conversation">
           <TabsList>
             <TabsTrigger value="conversation">Conversation</TabsTrigger>
@@ -222,7 +318,7 @@ export default function TicketDetailPage() {
           </TabsList>
           <TabsContent value="conversation" className="space-y-4">
             <Card className="p-4">
-              <CommentThread comments={ticket.comments} />
+              <CommentThread comments={ticket.comments} isStaff={isStaff} />
             </Card>
             {typingLabel && <p className="px-1 text-xs italic text-muted-foreground">{typingLabel}</p>}
             {isClosed && (

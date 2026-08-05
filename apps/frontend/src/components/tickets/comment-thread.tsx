@@ -1,4 +1,4 @@
-import { Lock } from 'lucide-react';
+import { Frown, Lock, Smile } from 'lucide-react';
 import type { TicketComment } from '@sentinel-desk/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { RichTextView } from '@/components/rich-text-editor';
@@ -13,7 +13,7 @@ function formatTime(iso: string) {
   });
 }
 
-export function CommentThread({ comments }: { comments: TicketComment[] }) {
+export function CommentThread({ comments, isStaff }: { comments: TicketComment[]; isStaff: boolean }) {
   if (comments.length === 0) {
     return <p className="py-8 text-center text-sm text-muted-foreground">No replies yet.</p>;
   }
@@ -41,6 +41,16 @@ export function CommentThread({ comments }: { comments: TicketComment[] }) {
                 {comment.author.firstName} {comment.author.lastName}
               </span>
               <span className="text-xs text-muted-foreground">{formatTime(comment.createdAt)}</span>
+              {isStaff && comment.sentiment === 'NEGATIVE' && (
+                <span title="AI: customer seems frustrated" className="text-red-500 dark:text-red-400">
+                  <Frown className="size-3.5" />
+                </span>
+              )}
+              {isStaff && comment.sentiment === 'POSITIVE' && (
+                <span title="AI: customer seems satisfied" className="text-emerald-500 dark:text-emerald-400">
+                  <Smile className="size-3.5" />
+                </span>
+              )}
               {internal && (
                 <span className="ml-auto flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
                   <Lock className="size-3" />
