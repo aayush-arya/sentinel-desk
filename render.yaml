@@ -4,13 +4,15 @@ services:
     runtime: node
     plan: free
     region: oregon
+    # Render's build container has a read-only /usr/bin, so `corepack enable`
+    # (which links a global pnpm binary there) fails with EROFS. npx sidesteps
+    # that entirely - it caches pnpm under the user's own npm cache dir instead.
     buildCommand: >-
-      corepack enable && corepack prepare pnpm@latest --activate &&
-      pnpm install --frozen-lockfile &&
-      pnpm --filter @sentinel-desk/backend exec prisma generate &&
-      pnpm --filter @sentinel-desk/backend build
+      npx pnpm@latest install --frozen-lockfile &&
+      npx pnpm@latest --filter @sentinel-desk/backend exec prisma generate &&
+      npx pnpm@latest --filter @sentinel-desk/backend build
     startCommand: >-
-      pnpm --filter @sentinel-desk/backend exec prisma migrate deploy &&
+      npx pnpm@latest --filter @sentinel-desk/backend exec prisma migrate deploy &&
       node apps/backend/dist/main.js
     healthCheckPath: /api/health
     envVars:
