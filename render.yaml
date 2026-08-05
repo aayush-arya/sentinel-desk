@@ -7,8 +7,15 @@ services:
     # Render's build container has a read-only /usr/bin, so `corepack enable`
     # (which links a global pnpm binary there) fails with EROFS. npx sidesteps
     # that entirely - it caches pnpm under the user's own npm cache dir instead.
+    #
+    # --prod=false overrides the NODE_ENV=production default of skipping
+    # devDependencies - prisma (CLI), @nestjs/cli, and typescript all live
+    # there, and the build genuinely needs them (nest build, prisma generate,
+    # and the start command's prisma migrate deploy all shell out to them).
+    # They're still devDependencies conceptually; this just makes sure the
+    # one install this service ever runs includes them.
     buildCommand: >-
-      npx pnpm@latest install --frozen-lockfile &&
+      npx pnpm@latest install --frozen-lockfile --prod=false &&
       npx pnpm@latest --filter @sentinel-desk/backend exec prisma generate &&
       npx pnpm@latest --filter @sentinel-desk/backend build
     startCommand: >-
