@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { TicketPriorityBadge, TicketStatusBadge } from './ticket-badges';
+import { SlaCountdown } from './sla-countdown';
 import { useAssignableAgents } from '@/hooks/use-agents';
 import { useTags } from '@/hooks/use-tags';
 import { useAssignTicket, useUpdateTicket, useTicketTags } from '@/hooks/use-tickets';
@@ -28,8 +29,32 @@ export function TicketSidebar({ ticket, isStaff }: { ticket: TicketDetail; isSta
 
   const handleError = (error: unknown, fallback: string) => toast.error(getApiErrorMessage(error, fallback));
 
+  const showResponseCountdown = ticket.responseDueAt && !ticket.firstResponseAt;
+  const showResolutionCountdown = ticket.resolutionDueAt && !ticket.resolvedAt;
+
   return (
     <div className="space-y-5">
+      {(showResponseCountdown || showResolutionCountdown) && (
+        <div className="space-y-1.5 rounded-lg border border-border bg-muted/40 p-3">
+          {showResponseCountdown && (
+            <SlaCountdown
+              label="Response"
+              dueAt={ticket.responseDueAt}
+              breached={ticket.responseBreached}
+              paused={!!ticket.slaPausedAt}
+            />
+          )}
+          {showResolutionCountdown && (
+            <SlaCountdown
+              label="Resolution"
+              dueAt={ticket.resolutionDueAt}
+              breached={ticket.resolutionBreached}
+              paused={!!ticket.slaPausedAt}
+            />
+          )}
+        </div>
+      )}
+
       <div>
         <p className="mb-1.5 text-xs font-medium text-muted-foreground">Status</p>
         {isStaff ? (

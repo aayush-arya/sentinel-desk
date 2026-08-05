@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, MessageSquare, Monitor, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react';
+import { Gauge, LayoutGrid, MessageSquare, Monitor, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react';
 import type { UserProfile } from '@sentinel-desk/types';
 import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { canManageTeam } from '@/lib/rbac';
+import { canManageTeam, canViewSlaDashboard } from '@/lib/rbac';
 import { useUIStore } from '@/store/ui-store';
 
 interface NavItem {
@@ -22,6 +22,9 @@ function getNavItems(user: UserProfile): NavItem[] {
     { href: '/dashboard/tickets', label: 'Tickets', icon: MessageSquare },
     { href: '/dashboard/sessions', label: 'Sessions', icon: Monitor },
   ];
+  if (canViewSlaDashboard(user.role.name)) {
+    items.splice(2, 0, { href: '/dashboard/sla', label: 'SLA', icon: Gauge });
+  }
   if (canManageTeam(user.role.name)) {
     items.splice(2, 0, { href: '/dashboard/team', label: 'Team', icon: Users });
   }

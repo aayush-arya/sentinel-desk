@@ -5,6 +5,7 @@ import type { AppConfig } from '../config/configuration';
 import {
   inviteTemplate,
   resetPasswordTemplate,
+  slaNoticeTemplate,
   verifyEmailTemplate,
 } from './templates';
 
@@ -57,6 +58,23 @@ export class MailService {
       to,
       `You're invited to join ${organizationName} on SentinelDesk`,
       inviteTemplate(inviterName, organizationName, roleLabel, url),
+    );
+  }
+
+  sendSlaNotice(
+    to: string,
+    firstName: string,
+    ticketId: string,
+    ticketNumber: number,
+    subject: string,
+    kind: 'response' | 'resolution' | 'escalation',
+  ) {
+    const url = `${this.frontendUrl}/dashboard/tickets/${ticketId}`;
+    const label = kind === 'escalation' ? 'auto-escalated' : `${kind} SLA breached`;
+    return this.send(
+      to,
+      `SentinelDesk: Ticket #${ticketNumber} ${label}`,
+      slaNoticeTemplate(firstName, ticketNumber, subject, kind, url),
     );
   }
 }

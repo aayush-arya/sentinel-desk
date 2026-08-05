@@ -1,4 +1,4 @@
-import { PrismaClient, RoleName, UserStatus } from '@prisma/client';
+import { PrismaClient, RoleName, TicketPriority, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -88,6 +88,59 @@ async function main() {
         lastName: demoUser.lastName,
         roleId: roleRecords[demoUser.role].id,
         status: UserStatus.ACTIVE,
+      },
+    });
+  }
+
+  console.log('Seeding default business hours (Mon-Fri 9am-5pm, America/New_York)...');
+  let businessHours = await prisma.businessHoursSchedule.findFirst({
+    where: { organizationId: organization.id, isDefault: true },
+  });
+  if (!businessHours) {
+    const year = new Date().getFullYear();
+    businessHours = await prisma.businessHoursSchedule.create({
+      data: {
+        organizationId: organization.id,
+        name: 'Standard business hours',
+        timezone: 'America/New_York',
+        isDefault: true,
+        slots: {
+          create: [1, 2, 3, 4, 5].map((dayOfWeek) => ({
+            dayOfWeek,
+            startMinute: 9 * 60,
+            endMinute: 17 * 60,
+          })),
+        },
+        holidays: {
+          create: [
+            { date: new Date(Date.UTC(year, 0, 1)), name: "New Year's Day" },
+            { date: new Date(Date.UTC(year, 6, 4)), name: 'Independence Day' },
+            { date: new Date(Date.UTC(year, 11, 25)), name: 'Christmas Day' },
+          ],
+        },
+      },
+    });
+  }
+
+  console.log('Seeding default SLA policy...');
+  const existingPolicy = await prisma.slaPolicy.findFirst({
+    where: { organizationId: organization.id, isDefault: true },
+  });
+  if (!existingPolicy) {
+    const SLA_RULES: { priority: TicketPriority; responseTargetMinutes: number; resolutionTargetMinutes: number }[] = [
+      { priority: TicketPriority.LOW, responseTargetMinutes: 480, resolutionTargetMinutes: 2880 },
+      { priority: TicketPriority.MEDIUM, responseTargetMinutes: 240, resolutionTargetMinutes: 1440 },
+      { priority: TicketPriority.HIGH, responseTargetMinutes: 60, resolutionTargetMinutes: 480 },
+      { priority: TicketPriority.URGENT, responseTargetMinutes: 30, resolutionTargetMinutes: 240 },
+    ];
+    await prisma.slaPolicy.create({
+      data: {
+        organizationId: organization.id,
+        name: 'Standard SLA',
+        isDefault: true,
+        businessHoursScheduleId: businessHours.id,
+        autoEscalateAtPercent: 80,
+        rules: { create: SLA_RULES },
       },
     });
   }

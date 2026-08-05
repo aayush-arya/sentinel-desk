@@ -69,3 +69,35 @@ export function inviteTemplate(
      <p style="color:#6B7280;font-size:12px;">This link expires in 7 days.</p>`,
   );
 }
+
+const SLA_NOTICE_COPY: Record<'response' | 'resolution' | 'escalation', { heading: string; body: string }> = {
+  response: {
+    heading: 'Response SLA breached',
+    body: 'has missed its first-response target and needs attention.',
+  },
+  resolution: {
+    heading: 'Resolution SLA breached',
+    body: 'has missed its resolution target.',
+  },
+  escalation: {
+    heading: 'Ticket auto-escalated',
+    body: 'was automatically escalated after burning through most of its resolution window unresolved.',
+  },
+};
+
+export function slaNoticeTemplate(
+  firstName: string,
+  ticketNumber: number,
+  subject: string,
+  kind: 'response' | 'resolution' | 'escalation',
+  ticketUrl: string,
+): string {
+  const copy = SLA_NOTICE_COPY[kind];
+  return layout(
+    `SentinelDesk: ${copy.heading} on ticket #${ticketNumber}`,
+    `<h2 style="color:#111827;font-size:18px;margin:0 0 12px;">${copy.heading}</h2>
+     <p>Hi ${firstName},</p>
+     <p>Ticket <strong>#${ticketNumber} — ${subject}</strong> ${copy.body}</p>
+     ${button(ticketUrl, 'Open ticket')}`,
+  );
+}

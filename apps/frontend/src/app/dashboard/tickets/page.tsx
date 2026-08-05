@@ -170,6 +170,12 @@ function TicketsPageContent() {
                     ))}
                   </div>
                 </div>
+                {(ticket.responseBreached || ticket.resolutionBreached) && (
+                  <span
+                    className="flex size-2 shrink-0 rounded-full bg-red-500"
+                    title="SLA breached"
+                  />
+                )}
                 <TicketPriorityBadge priority={ticket.priority} className="shrink-0" />
                 <TicketStatusBadge status={ticket.status} className="shrink-0" />
                 <div className="w-8 shrink-0">

@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { BullModule } from '@nestjs/bullmq';
+import { ScheduleModule } from '@nestjs/schedule';
 import configuration, { AppConfig } from './config/configuration';
 import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './prisma/prisma.module';
@@ -11,6 +13,7 @@ import { StorageModule } from './storage/storage.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { TicketsModule } from './tickets/tickets.module';
+import { SlaModule } from './sla/sla.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -35,6 +38,16 @@ import { CsrfGuard } from './common/guards/csrf.guard';
         ],
       }),
     }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<AppConfig, true>) => ({
+        connection: {
+          host: config.get('redis', { infer: true }).host,
+          port: config.get('redis', { infer: true }).port,
+        },
+      }),
+    }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuditModule,
     MailModule,
@@ -42,6 +55,7 @@ import { CsrfGuard } from './common/guards/csrf.guard';
     AuthModule,
     UsersModule,
     TicketsModule,
+    SlaModule,
     HealthModule,
   ],
   providers: [

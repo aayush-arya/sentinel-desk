@@ -8,10 +8,12 @@ import {
   CommentVisibility,
   Prisma,
   TicketHistoryAction,
+  TicketPriority,
   TicketStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { SlaService } from '../sla/sla.service';
 import { sanitizeRichText } from '../common/utils/sanitize-html.util';
 import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import { isStaff } from './types/authenticated-request.type';
@@ -51,6 +53,7 @@ export class TicketsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly sla: SlaService,
   ) {}
 
   async create(user: AuthenticatedUser, dto: CreateTicketDto, files: Express.Multer.File[] = []) {
@@ -66,6 +69,9 @@ export class TicketsService {
       requesterId = dto.requesterId;
     }
 
+    const priority = dto.priority ?? TicketPriority.MEDIUM;
+    const dueDates = await this.sla.computeDueDatesForNewTicket(user.organizationId, priority);
+
     const ticket = await this.prisma.$transaction(async (tx) => {
       const org = await tx.organization.update({
         where: { id: user.organizationId },
@@ -78,8 +84,11 @@ export class TicketsService {
           organizationId: user.organizationId,
           number,
           subject: dto.subject,
-          priority: dto.priority,
+          priority,
           requesterId,
+          slaPolicyId: dueDates.slaPolicyId,
+          responseDueAt: dueDates.responseDueAt,
+          resolutionDueAt: dueDates.resolutionDueAt,
           tags: dto.tagIds?.length
             ? { create: dto.tagIds.map((tagId) => ({ tagId })) }
             : undefined,
@@ -173,6 +182,9 @@ export class TicketsService {
     }
     if (dto.priority && dto.priority !== ticket.priority) {
       data.priority = dto.priority;
+      const dueDates = await this.sla.recomputeDueDatesForPriorityChange(ticketId, dto.priority);
+      if (dueDates.responseDueAt) data.responseDueAt = dueDates.responseDueAt;
+      if (dueDates.resolutionDueAt) data.resolutionDueAt = dueDates.resolutionDueAt;
       historyEntries.push({
         ticketId,
         actorId: user.id,
@@ -180,10 +192,18 @@ export class TicketsService {
         metadata: { from: ticket.priority, to: dto.priority },
       });
     }
+
+    const PAUSING_STATUSES: TicketStatus[] = [TicketStatus.PENDING, TicketStatus.ON_HOLD];
+    let slaTransition: 'pause' | 'resume' | null = null;
     if (dto.status && dto.status !== ticket.status) {
       data.status = dto.status;
       if (dto.status === TicketStatus.RESOLVED) data.resolvedAt = new Date();
       if (dto.status === TicketStatus.CLOSED) data.closedAt = new Date();
+      if (!PAUSING_STATUSES.includes(ticket.status) && PAUSING_STATUSES.includes(dto.status)) {
+        slaTransition = 'pause';
+      } else if (PAUSING_STATUSES.includes(ticket.status) && dto.status === TicketStatus.OPEN) {
+        slaTransition = 'resume';
+      }
       historyEntries.push({
         ticketId,
         actorId: user.id,
@@ -196,6 +216,9 @@ export class TicketsService {
       this.prisma.ticket.update({ where: { id: ticketId }, data }),
       ...(historyEntries.length ? [this.prisma.ticketHistory.createMany({ data: historyEntries })] : []),
     ]);
+
+    if (slaTransition === 'pause') await this.sla.pause(ticketId, user.id);
+    else if (slaTransition === 'resume') await this.sla.resume(ticketId, user.id);
 
     return this.findOne(user, ticketId);
   }
@@ -407,6 +430,8 @@ export class TicketsService {
       throw new BadRequestException('One or more commentIds do not belong to this ticket');
     }
 
+    const dueDates = await this.sla.computeDueDatesForNewTicket(user.organizationId, source.priority);
+
     const newTicketId = await this.prisma.$transaction(async (tx) => {
       const org = await tx.organization.update({
         where: { id: user.organizationId },
@@ -423,6 +448,9 @@ export class TicketsService {
           requesterId: source.requesterId,
           assigneeId: source.assigneeId,
           splitFromId: source.id,
+          slaPolicyId: dueDates.slaPolicyId,
+          responseDueAt: dueDates.responseDueAt,
+          resolutionDueAt: dueDates.resolutionDueAt,
         },
       });
 
@@ -557,6 +585,11 @@ export class TicketsService {
       updatedAt: ticket.updatedAt,
       firstResponseAt: ticket.firstResponseAt,
       resolvedAt: ticket.resolvedAt,
+      responseDueAt: ticket.responseDueAt,
+      resolutionDueAt: ticket.resolutionDueAt,
+      responseBreached: ticket.responseBreached,
+      resolutionBreached: ticket.resolutionBreached,
+      slaPausedAt: ticket.slaPausedAt,
     };
   }
 
@@ -582,6 +615,11 @@ export class TicketsService {
       firstResponseAt: ticket.firstResponseAt,
       resolvedAt: ticket.resolvedAt,
       closedAt: ticket.closedAt,
+      responseDueAt: ticket.responseDueAt,
+      resolutionDueAt: ticket.resolutionDueAt,
+      responseBreached: ticket.responseBreached,
+      resolutionBreached: ticket.resolutionBreached,
+      slaPausedAt: ticket.slaPausedAt,
       createdAt: ticket.createdAt,
       updatedAt: ticket.updatedAt,
     };

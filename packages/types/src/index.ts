@@ -138,6 +138,11 @@ export interface TicketSummary {
   updatedAt: string;
   firstResponseAt: string | null;
   resolvedAt: string | null;
+  responseDueAt: string | null;
+  resolutionDueAt: string | null;
+  responseBreached: boolean;
+  resolutionBreached: boolean;
+  slaPausedAt: string | null;
 }
 
 export interface TicketAttachment {
@@ -177,6 +182,11 @@ export interface TicketDetail {
   firstResponseAt: string | null;
   resolvedAt: string | null;
   closedAt: string | null;
+  responseDueAt: string | null;
+  resolutionDueAt: string | null;
+  responseBreached: boolean;
+  resolutionBreached: boolean;
+  slaPausedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -201,7 +211,12 @@ export type TicketHistoryAction =
   | 'SPLIT'
   | 'REOPENED'
   | 'COMMENT_ADDED'
-  | 'NOTE_ADDED';
+  | 'NOTE_ADDED'
+  | 'SLA_PAUSED'
+  | 'SLA_RESUMED'
+  | 'RESPONSE_SLA_BREACHED'
+  | 'RESOLUTION_SLA_BREACHED'
+  | 'AUTO_ESCALATED';
 
 export interface TicketHistoryEntry {
   id: string;
@@ -211,4 +226,78 @@ export interface TicketHistoryEntry {
   metadata: Record<string, unknown>;
   createdAt: string;
   actor: { id: string; firstName: string; lastName: string; avatarUrl: string | null } | null;
+}
+
+// ── SLA engine ─────────────────────────────────────────────────────────
+
+export interface BusinessHoursSlot {
+  id: string;
+  scheduleId: string;
+  dayOfWeek: number; // 0 = Sunday .. 6 = Saturday
+  startMinute: number;
+  endMinute: number;
+}
+
+export interface Holiday {
+  id: string;
+  scheduleId: string;
+  date: string;
+  name: string;
+}
+
+export interface BusinessHoursSchedule {
+  id: string;
+  organizationId: string;
+  name: string;
+  timezone: string;
+  isDefault: boolean;
+  slots: BusinessHoursSlot[];
+  holidays: Holiday[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SlaPolicyRule {
+  id: string;
+  policyId: string;
+  priority: TicketPriority;
+  responseTargetMinutes: number;
+  resolutionTargetMinutes: number;
+}
+
+export interface SlaPolicy {
+  id: string;
+  organizationId: string;
+  name: string;
+  isDefault: boolean;
+  businessHoursScheduleId: string;
+  autoEscalateAtPercent: number;
+  rules: SlaPolicyRule[];
+  businessHours: { id: string; name: string; timezone: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SlaDashboardSummary {
+  totalActive: number;
+  onTrack: number;
+  atRisk: number;
+  breached: number;
+  complianceRate: number | null;
+  resolvedLast30Days: number;
+}
+
+export interface SlaViolationTicket {
+  id: string;
+  number: number;
+  subject: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  responseBreached: boolean;
+  resolutionBreached: boolean;
+  responseDueAt: string | null;
+  resolutionDueAt: string | null;
+  assignee: { id: string; firstName: string; lastName: string } | null;
+  requester: { id: string; firstName: string; lastName: string };
+  updatedAt: string;
 }

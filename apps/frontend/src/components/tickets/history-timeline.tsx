@@ -16,6 +16,11 @@ const ACTION_LABELS: Record<string, string> = {
   REOPENED: 'reopened the ticket',
   COMMENT_ADDED: 'replied',
   NOTE_ADDED: 'added an internal note',
+  SLA_PAUSED: 'paused the SLA clock',
+  SLA_RESUMED: 'resumed the SLA clock',
+  RESPONSE_SLA_BREACHED: 'missed the response SLA',
+  RESOLUTION_SLA_BREACHED: 'missed the resolution SLA',
+  AUTO_ESCALATED: 'auto-escalated this ticket',
 };
 
 function describeMetadata(action: string, metadata: Record<string, unknown>): string | null {
@@ -35,6 +40,10 @@ function describeMetadata(action: string, metadata: Record<string, unknown>): st
       return `from #${metadata.fromTicketNumber}`;
     case 'SPLIT':
       return `into #${metadata.newTicketNumber}`;
+    case 'SLA_RESUMED':
+      return metadata.pausedMinutes != null ? `paused for ${metadata.pausedMinutes} min` : null;
+    case 'AUTO_ESCALATED':
+      return `${metadata.fromPriority} → ${metadata.toPriority}`;
     default:
       return null;
   }

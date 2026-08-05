@@ -30,10 +30,12 @@ model Organization {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  users     User[]
-  auditLogs AuditLog[]
-  tickets   Ticket[]
-  tags      Tag[]
+  users                  User[]
+  auditLogs              AuditLog[]
+  tickets                Ticket[]
+  tags                   Tag[]
+  businessHoursSchedules BusinessHoursSchedule[]
+  slaPolicies            SlaPolicy[]
 
   @@map("organizations")
 }
@@ -121,8 +123,8 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   inviteTokens            InviteToken[]
   auditLogs               AuditLog[]
-  ticketsRequested        Ticket[]        @relation("TicketRequester")
-  ticketsAssigned         Ticket[]        @relation("TicketAssignee")
+  ticketsRequested        Ticket[]                 @relation("TicketRequester")
+  ticketsAssigned         Ticket[]                 @relation("TicketAssignee")
   comments                Comment[]
   ticketHistoryEntries    TicketHistory[]
 
@@ -234,26 +236,38 @@ enum TicketPriority {
 }
 
 model Ticket {
-  id             String         @id @default(uuid())
-  organizationId String
-  number         Int
-  subject        String
-  status         TicketStatus   @default(OPEN)
-  priority       TicketPriority @default(MEDIUM)
-  requesterId    String
-  assigneeId     String?
-  mergedIntoId   String?
-  splitFromId    String?
-  reopenedCount  Int            @default(0)
+  id              String         @id @default(uuid())
+  organizationId  String
+  number          Int
+  subject         String
+  status          TicketStatus   @default(OPEN)
+  priority        TicketPriority @default(MEDIUM)
+  requesterId     String
+  assigneeId      String?
+  mergedIntoId    String?
+  splitFromId     String?
+  reopenedCount   Int            @default(0)
   firstResponseAt DateTime?
-  resolvedAt     DateTime?
-  closedAt       DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+
+  // SLA tracking — see apps/backend/src/sla/sla.service.ts for how these are computed
+  // and kept in sync as the ticket moves through statuses.
+  slaPolicyId        String?
+  responseDueAt      DateTime?
+  resolutionDueAt    DateTime?
+  responseBreached   Boolean   @default(false)
+  resolutionBreached Boolean   @default(false)
+  slaPausedAt        DateTime?
+  slaEscalatedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   requester    User         @relation("TicketRequester", fields: [requesterId], references: [id])
   assignee     User?        @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  slaPolicy    SlaPolicy?   @relation(fields: [slaPolicyId], references: [id])
 
   mergedInto    Ticket?  @relation("TicketMerge", fields: [mergedIntoId], references: [id])
   mergedTickets Ticket[] @relation("TicketMerge")
@@ -268,6 +282,8 @@ model Ticket {
   @@index([organizationId, status])
   @@index([requesterId])
   @@index([assigneeId])
+  @@index([responseDueAt])
+  @@index([resolutionDueAt])
   @@map("tickets")
 }
 
@@ -348,6 +364,11 @@ enum TicketHistoryAction {
   REOPENED
   COMMENT_ADDED
   NOTE_ADDED
+  SLA_PAUSED
+  SLA_RESUMED
+  RESPONSE_SLA_BREACHED
+  RESOLUTION_SLA_BREACHED
+  AUTO_ESCALATED
 }
 
 model TicketHistory {
@@ -363,4 +384,87 @@ model TicketHistory {
 
   @@index([ticketId, createdAt])
   @@map("ticket_history")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// SLA engine — business hours, holidays, and per-priority targets
+// ─────────────────────────────────────────────────────────────────────
+
+model BusinessHoursSchedule {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  timezone       String   @default("UTC")
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  slots        BusinessHoursSlot[]
+  holidays     Holiday[]
+  slaPolicies  SlaPolicy[]
+
+  @@index([organizationId])
+  @@map("business_hours_schedules")
+}
+
+model BusinessHoursSlot {
+  id          String @id @default(uuid())
+  scheduleId  String
+  /// 0 = Sunday .. 6 = Saturday
+  dayOfWeek   Int
+  /// Minutes since local midnight (schedule.timezone), e.g. 9:00am = 540
+  startMinute Int
+  endMinute   Int
+
+  schedule BusinessHoursSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId])
+  @@map("business_hours_slots")
+}
+
+model Holiday {
+  id         String   @id @default(uuid())
+  scheduleId String
+  /// Stored as midnight UTC representing a calendar date — time-of-day is not meaningful here
+  date       DateTime
+  name       String
+
+  schedule BusinessHoursSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, date])
+  @@map("holidays")
+}
+
+model SlaPolicy {
+  id                      String   @id @default(uuid())
+  organizationId          String
+  name                    String
+  isDefault               Boolean  @default(false)
+  businessHoursScheduleId String
+  /// Auto-escalate a ticket once this % of its resolution window has elapsed unresolved
+  autoEscalateAtPercent   Int      @default(80)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  organization  Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  businessHours BusinessHoursSchedule @relation(fields: [businessHoursScheduleId], references: [id])
+  rules         SlaPolicyRule[]
+  tickets       Ticket[]
+
+  @@index([organizationId])
+  @@map("sla_policies")
+}
+
+model SlaPolicyRule {
+  id                      String         @id @default(uuid())
+  policyId                String
+  priority                TicketPriority
+  responseTargetMinutes   Int
+  resolutionTargetMinutes Int
+
+  policy SlaPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, priority])
+  @@map("sla_policy_rules")
 }
