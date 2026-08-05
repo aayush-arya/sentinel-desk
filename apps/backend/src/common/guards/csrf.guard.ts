@@ -13,6 +13,8 @@ export class CsrfGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
+    if (context.getType() !== 'http') return true; // no cookies/headers to check on a WS message
+
     const required = this.reflector.getAllAndOverride<boolean>(
       REQUIRE_CSRF_KEY,
       [context.getHandler(), context.getClass()],

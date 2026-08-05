@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2, Paperclip, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CommentVisibility } from '@sentinel-desk/types';
@@ -10,6 +10,10 @@ import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { getApiErrorMessage } from '@/lib/api-client';
 import { useAddComment } from '@/hooks/use-tickets';
+import { useRealtime } from '@/lib/realtime-context';
+
+// How long to wait after the last keystroke before telling other viewers we stopped typing.
+const TYPING_IDLE_MS = 2_000;
 
 export function ReplyComposer({
   ticketId,
@@ -24,11 +28,36 @@ export function ReplyComposer({
   const [visibility, setVisibility] = useState<CommentVisibility>('PUBLIC');
   const [files, setFiles] = useState<File[]>([]);
   const addComment = useAddComment(ticketId);
+  const { socket } = useRealtime();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isEmpty = !body || body === '<p></p>';
 
+  const stopTyping = useCallback(() => {
+    if (!typingTimeoutRef.current) return;
+    clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = null;
+    socket?.emit('typing:stop', { ticketId });
+  }, [socket, ticketId]);
+
+  useEffect(() => {
+    return () => stopTyping();
+  }, [ticketId, stopTyping]);
+
+  const handleBodyChange = (value: string) => {
+    setBody(value);
+    if (!socket) return;
+    if (!typingTimeoutRef.current) {
+      socket.emit('typing:start', { ticketId });
+    } else {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    typingTimeoutRef.current = setTimeout(stopTyping, TYPING_IDLE_MS);
+  };
+
   const handleSubmit = async () => {
     if (isEmpty) return;
+    stopTyping();
     try {
       await addComment.mutateAsync({ body, visibility: isStaff ? visibility : 'PUBLIC', files });
       setBody('');
@@ -70,7 +99,7 @@ export function ReplyComposer({
 
       <RichTextEditor
         value={body}
-        onChange={setBody}
+        onChange={handleBodyChange}
         placeholder={visibility === 'INTERNAL' ? 'Note visible only to your team…' : 'Write a reply…'}
       />
 

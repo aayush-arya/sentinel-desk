@@ -4,9 +4,11 @@ import { TicketsService } from './tickets.service';
 import { TagsController } from './tags.controller';
 import { TagsService } from './tags.service';
 import { SlaModule } from '../sla/sla.module';
+import { RealtimeModule } from '../realtime/realtime.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [SlaModule],
+  imports: [SlaModule, RealtimeModule, NotificationsModule],
   controllers: [TicketsController, TagsController],
   providers: [TicketsService, TagsService],
   exports: [TicketsService],

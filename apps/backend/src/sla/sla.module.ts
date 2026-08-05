@@ -10,9 +10,15 @@ import { SlaBreachCheckService } from './sla-breach-check.service';
 import { SlaNotificationsProcessor } from './sla-notifications.processor';
 import { SlaService } from './sla.service';
 import { SLA_NOTIFICATIONS_QUEUE } from './sla.constants';
+import { RealtimeModule } from '../realtime/realtime.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [BullModule.registerQueue({ name: SLA_NOTIFICATIONS_QUEUE })],
+  imports: [
+    BullModule.registerQueue({ name: SLA_NOTIFICATIONS_QUEUE }),
+    RealtimeModule,
+    NotificationsModule,
+  ],
   controllers: [BusinessHoursController, SlaPoliciesController, SlaDashboardController],
   providers: [
     BusinessHoursService,

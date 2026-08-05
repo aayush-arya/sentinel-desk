@@ -14,6 +14,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { SlaService } from '../sla/sla.service';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 import { sanitizeRichText } from '../common/utils/sanitize-html.util';
 import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import { isStaff } from './types/authenticated-request.type';
@@ -54,7 +56,15 @@ export class TicketsService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly sla: SlaService,
+    private readonly realtime: RealtimeGateway,
+    private readonly notifications: NotificationsService,
   ) {}
+
+  /** Tells anyone viewing this ticket, plus the org's list/dashboard views, to refresh. */
+  private broadcastTicketChanged(organizationId: string, ticketId: string) {
+    this.realtime.emitToTicket(ticketId, 'ticket:updated', { ticketId });
+    this.realtime.emitToOrg(organizationId, 'ticket:updated', { ticketId });
+  }
 
   async create(user: AuthenticatedUser, dto: CreateTicketDto, files: Express.Multer.File[] = []) {
     let requesterId = user.id;
@@ -114,6 +124,8 @@ export class TicketsService {
     if (files.length) {
       await this.saveAttachments(ticket.comment.id, files);
     }
+
+    this.realtime.emitToOrg(user.organizationId, 'ticket:created', { ticketId: ticket.created.id });
 
     return this.findOne(user, ticket.created.id);
   }
@@ -220,6 +232,7 @@ export class TicketsService {
     if (slaTransition === 'pause') await this.sla.pause(ticketId, user.id);
     else if (slaTransition === 'resume') await this.sla.resume(ticketId, user.id);
 
+    this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
   }
 
@@ -244,6 +257,7 @@ export class TicketsService {
       }),
     ]);
 
+    this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
   }
 
@@ -309,6 +323,34 @@ export class TicketsService {
       await this.saveAttachments(comment.id, files);
     }
 
+    if (visibility === CommentVisibility.PUBLIC) {
+      // Safe to push the full comment: PUBLIC content is visible to everyone already in
+      // this room. INTERNAL notes are never pushed this way — see broadcastTicketChanged
+      // below, which only tells clients to refetch (and the REST layer filters visibility
+      // correctly), rather than duplicating that filtering logic over the socket.
+      const author = await this.prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
+        select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true, roleId: true },
+      });
+      this.realtime.emitToTicket(ticketId, 'ticket:comment:new', {
+        ticketId,
+        comment: { id: comment.id, body: comment.body, visibility, createdAt: comment.createdAt, author },
+      });
+
+      const recipientId = staff ? ticket.requesterId : ticket.assigneeId;
+      if (recipientId && recipientId !== user.id) {
+        await this.notifications.create({
+          organizationId: user.organizationId,
+          userId: recipientId,
+          type: 'TICKET_REPLY',
+          title: `New reply on ticket #${ticket.number}`,
+          body: `${author.firstName} ${author.lastName} replied to "${ticket.subject}"`,
+          ticketId,
+        });
+      }
+    }
+    this.broadcastTicketChanged(user.organizationId, ticketId);
+
     return this.findOne(user, ticketId);
   }
 
@@ -336,6 +378,17 @@ export class TicketsService {
       }),
     ]);
 
+    if (dto.assigneeId !== user.id) {
+      await this.notifications.create({
+        organizationId: user.organizationId,
+        userId: dto.assigneeId,
+        type: 'TICKET_ASSIGNED',
+        title: `Ticket #${ticket.number} assigned to you`,
+        body: ticket.subject,
+        ticketId,
+      });
+    }
+    this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
   }
 
@@ -354,6 +407,7 @@ export class TicketsService {
         },
       }),
     ]);
+    this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
   }
 
@@ -382,6 +436,18 @@ export class TicketsService {
       }),
     ]);
 
+    const notifyId = dto.newAssigneeId ?? ticket.assigneeId;
+    if (notifyId && notifyId !== user.id) {
+      await this.notifications.create({
+        organizationId: user.organizationId,
+        userId: notifyId,
+        type: 'TICKET_ASSIGNED',
+        title: `Ticket #${ticket.number} escalated`,
+        body: dto.reason,
+        ticketId,
+      });
+    }
+    this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
   }
 
@@ -420,6 +486,8 @@ export class TicketsService {
       }),
     ]);
 
+    this.broadcastTicketChanged(user.organizationId, ticketId);
+    this.broadcastTicketChanged(user.organizationId, target.id);
     return this.findOne(user, ticketId);
   }
 
@@ -481,6 +549,8 @@ export class TicketsService {
       return newTicket.id;
     });
 
+    this.realtime.emitToOrg(user.organizationId, 'ticket:created', { ticketId: newTicketId });
+    this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, newTicketId);
   }
 
@@ -506,6 +576,7 @@ export class TicketsService {
         },
       }),
     ]);
+    this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
   }
 
@@ -524,6 +595,7 @@ export class TicketsService {
         },
       }),
     ]);
+    this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
   }
 

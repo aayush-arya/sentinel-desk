@@ -301,3 +301,41 @@ export interface SlaViolationTicket {
   requester: { id: string; firstName: string; lastName: string };
   updatedAt: string;
 }
+
+// ── Realtime & notifications ─────────────────────────────────────────
+
+export type NotificationType = 'TICKET_ASSIGNED' | 'TICKET_REPLY' | 'SLA_BREACHED' | 'SLA_ESCALATED';
+
+export interface AppNotification {
+  id: string;
+  organizationId: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  ticketId: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface PresenceUpdateEvent {
+  userId: string;
+  online: boolean;
+}
+
+export interface TicketTypingEvent {
+  ticketId: string;
+  userId: string;
+  isTyping: boolean;
+}
+
+export interface TicketCommentNewEvent {
+  ticketId: string;
+  comment: {
+    id: string;
+    body: string;
+    visibility: CommentVisibility;
+    createdAt: string;
+    author: TicketPerson & { roleId: string };
+  };
+}

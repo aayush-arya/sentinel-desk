@@ -6,8 +6,9 @@ import { toast } from 'sonner';
 import { ROLE_LABELS, type RoleName } from '@sentinel-desk/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useOrgMembers, useUpdateMember } from '@/hooks/use-team';
+import { useIsOnline } from '@/lib/realtime-context';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarBadge, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,6 +24,13 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'dest
   SUSPENDED: 'destructive',
   DEACTIVATED: 'outline',
 };
+
+// Isolated so useIsOnline (a hook) can be called once per row rather than inside the .map() loop.
+function MemberPresenceBadge({ userId }: { userId: string }) {
+  const online = useIsOnline(userId);
+  if (!online) return null;
+  return <AvatarBadge className="bg-emerald-500" />;
+}
 
 export default function TeamPage() {
   const router = useRouter();
@@ -90,6 +98,7 @@ export default function TeamPage() {
                           {member.firstName[0]}
                           {member.lastName[0]}
                         </AvatarFallback>
+                        <MemberPresenceBadge userId={member.id} />
                       </Avatar>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">

@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, Pencil, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import type { TicketComment, TicketCommentNewEvent, TicketDetail, TicketTypingEvent } from '@sentinel-desk/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { useTicket, useTicketHistory, useUpdateTicket, useReopenTicket } from '@/hooks/use-tickets';
+import { useTicket, useTicketHistory, useUpdateTicket, useReopenTicket, TICKET_KEY } from '@/hooks/use-tickets';
+import { useRealtime } from '@/lib/realtime-context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +24,10 @@ import { SplitDialog } from '@/components/tickets/split-dialog';
 import { HistoryTimeline } from '@/components/tickets/history-timeline';
 import { getApiErrorMessage } from '@/lib/api-client';
 
+// A stopped/dropped connection can miss a `typing:stop` event — this bounds how
+// long a stale "is typing" indicator can survive without one.
+const TYPING_STALE_MS = 5_000;
+
 export default function TicketDetailPage() {
   const params = useParams<{ id: string }>();
   const { data: user } = useCurrentUser();
@@ -28,9 +35,105 @@ export default function TicketDetailPage() {
   const { data: history } = useTicketHistory(params.id);
   const updateTicket = useUpdateTicket(params.id);
   const reopenTicket = useReopenTicket(params.id);
+  const { socket } = useRealtime();
+  const queryClient = useQueryClient();
 
   const [editingSubject, setEditingSubject] = useState(false);
   const [subjectDraft, setSubjectDraft] = useState('');
+  const [typingUserIds, setTypingUserIds] = useState<Set<string>>(new Set());
+  const typingTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  useEffect(() => {
+    const ticketId = params.id;
+    if (!socket || !ticketId) return;
+
+    // Re-join on every (re)connect, not just on mount — a dropped connection (server
+    // restart, sleep/wake, flaky network) rejoins the org/user rooms automatically
+    // server-side, but ticket rooms are only joined on explicit request.
+    const joinRoom = () => socket.emit('ticket:join', { ticketId });
+    joinRoom();
+    socket.on('connect', joinRoom);
+
+    const clearTypingTimeout = (userId: string) => {
+      const existing = typingTimeoutsRef.current.get(userId);
+      if (existing) clearTimeout(existing);
+      typingTimeoutsRef.current.delete(userId);
+    };
+
+    const handleComment = (event: TicketCommentNewEvent) => {
+      if (event.ticketId !== ticketId) return;
+      queryClient.setQueryData<TicketDetail>(TICKET_KEY(ticketId), (prev) => {
+        if (!prev) return prev;
+        if (prev.comments.some((c) => c.id === event.comment.id)) return prev;
+        const newComment: TicketComment = {
+          id: event.comment.id,
+          ticketId,
+          authorId: event.comment.author.id,
+          visibility: event.comment.visibility,
+          body: event.comment.body,
+          createdAt: event.comment.createdAt,
+          editedAt: null,
+          author: event.comment.author,
+          attachments: [],
+        };
+        return { ...prev, comments: [...prev.comments, newComment] };
+      });
+      clearTypingTimeout(event.comment.author.id);
+      setTypingUserIds((prev) => {
+        if (!prev.has(event.comment.author.id)) return prev;
+        const next = new Set(prev);
+        next.delete(event.comment.author.id);
+        return next;
+      });
+    };
+
+    const handleTyping = (event: TicketTypingEvent) => {
+      if (event.ticketId !== ticketId) return;
+      clearTypingTimeout(event.userId);
+      if (event.isTyping) {
+        setTypingUserIds((prev) => new Set(prev).add(event.userId));
+        typingTimeoutsRef.current.set(
+          event.userId,
+          setTimeout(() => {
+            typingTimeoutsRef.current.delete(event.userId);
+            setTypingUserIds((prev) => {
+              const next = new Set(prev);
+              next.delete(event.userId);
+              return next;
+            });
+          }, TYPING_STALE_MS),
+        );
+      } else {
+        setTypingUserIds((prev) => {
+          const next = new Set(prev);
+          next.delete(event.userId);
+          return next;
+        });
+      }
+    };
+
+    socket.on('ticket:comment:new', handleComment);
+    socket.on('ticket:typing', handleTyping);
+
+    return () => {
+      socket.off('connect', joinRoom);
+      socket.emit('ticket:leave', { ticketId });
+      socket.off('ticket:comment:new', handleComment);
+      socket.off('ticket:typing', handleTyping);
+      typingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      typingTimeoutsRef.current.clear();
+      setTypingUserIds(new Set());
+    };
+  }, [socket, params.id, queryClient]);
+
+  const typingLabel = (() => {
+    if (typingUserIds.size === 0 || !ticket) return null;
+    const names = [ticket.requester, ticket.assignee]
+      .filter((person): person is NonNullable<typeof person> => !!person && typingUserIds.has(person.id))
+      .map((person) => person.firstName);
+    if (names.length > 0) return `${names.join(', ')} ${names.length > 1 ? 'are' : 'is'} typing…`;
+    return 'Someone is typing…';
+  })();
 
   if (isLoading || !ticket || !user) {
     return (
@@ -121,6 +224,7 @@ export default function TicketDetailPage() {
             <Card className="p-4">
               <CommentThread comments={ticket.comments} />
             </Card>
+            {typingLabel && <p className="px-1 text-xs italic text-muted-foreground">{typingLabel}</p>}
             {isClosed && (
               <Button variant="outline" size="sm" onClick={handleReopen} disabled={reopenTicket.isPending}>
                 {reopenTicket.isPending ? (

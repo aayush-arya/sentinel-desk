@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import configuration, { AppConfig } from './config/configuration';
@@ -14,11 +14,14 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { SlaModule } from './sla/sla.module';
+import { RealtimeModule } from './realtime/realtime.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { CsrfGuard } from './common/guards/csrf.guard';
+import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 
 @Module({
   imports: [
@@ -56,10 +59,12 @@ import { CsrfGuard } from './common/guards/csrf.guard';
     UsersModule,
     TicketsModule,
     SlaModule,
+    RealtimeModule,
+    NotificationsModule,
     HealthModule,
   ],
   providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },

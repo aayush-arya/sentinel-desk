@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { NotificationBell } from '@/components/dashboard/notification-bell';
 import { useLogout } from '@/hooks/use-auth';
 
 function initials(user: UserProfile) {
@@ -39,6 +40,7 @@ export function DashboardTopbar({ user }: { user: UserProfile }) {
       </div>
 
       <div className="flex items-center gap-1">
+        <NotificationBell />
         <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger className="ml-1 rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring">

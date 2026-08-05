@@ -23,7 +23,7 @@ export interface TicketFilters {
 }
 
 const TICKETS_KEY = (filters: TicketFilters) => ['tickets', filters] as const;
-const TICKET_KEY = (id: string) => ['tickets', id] as const;
+export const TICKET_KEY = (id: string) => ['tickets', id] as const;
 const TICKET_HISTORY_KEY = (id: string) => ['tickets', id, 'history'] as const;
 
 export function useTickets(filters: TicketFilters) {

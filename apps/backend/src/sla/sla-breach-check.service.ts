@@ -2,8 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
-import { TicketHistoryAction, TicketPriority, TicketStatus } from '@prisma/client';
+import { NotificationType, TicketHistoryAction, TicketPriority, TicketStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SLA_NOTIFICATIONS_QUEUE } from './sla.constants';
 
 const NEXT_PRIORITY: Record<TicketPriority, TicketPriority> = {
@@ -24,8 +26,31 @@ export class SlaBreachCheckService {
 
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue(SLA_NOTIFICATIONS_QUEUE) private readonly notifications: Queue,
+    private readonly realtime: RealtimeGateway,
+    private readonly notificationsService: NotificationsService,
+    @InjectQueue(SLA_NOTIFICATIONS_QUEUE) private readonly emailQueue: Queue,
   ) {}
+
+  /** Pushes a live update to the ticket + org rooms and, if there's someone to tell, an in-app notification. */
+  private async notifyAndBroadcast(
+    ticket: { id: string; organizationId: string; number: number; subject: string; assignee: { id: string } | null },
+    type: NotificationType,
+    title: string,
+  ) {
+    this.realtime.emitToTicket(ticket.id, 'ticket:updated', { ticketId: ticket.id });
+    this.realtime.emitToOrg(ticket.organizationId, 'ticket:updated', { ticketId: ticket.id });
+
+    if (ticket.assignee) {
+      await this.notificationsService.create({
+        organizationId: ticket.organizationId,
+        userId: ticket.assignee.id,
+        type,
+        title,
+        body: ticket.subject,
+        ticketId: ticket.id,
+      });
+    }
+  }
 
   @Cron(CronExpression.EVERY_MINUTE)
   async sweep() {
@@ -66,7 +91,7 @@ export class SlaBreachCheckService {
           data: { ticketId: ticket.id, action: TicketHistoryAction.RESPONSE_SLA_BREACHED },
         }),
       ]);
-      await this.notifications.add('breach', {
+      await this.emailQueue.add('breach', {
         ticketId: ticket.id,
         organizationId: ticket.organizationId,
         ticketNumber: ticket.number,
@@ -75,6 +100,11 @@ export class SlaBreachCheckService {
         assigneeEmail: ticket.assignee?.email ?? null,
         assigneeFirstName: ticket.assignee?.firstName ?? null,
       });
+      await this.notifyAndBroadcast(
+        ticket,
+        NotificationType.SLA_BREACHED,
+        `Response SLA breached on ticket #${ticket.number}`,
+      );
     }
     return candidates.length;
   }
@@ -99,7 +129,7 @@ export class SlaBreachCheckService {
           data: { ticketId: ticket.id, action: TicketHistoryAction.RESOLUTION_SLA_BREACHED },
         }),
       ]);
-      await this.notifications.add('breach', {
+      await this.emailQueue.add('breach', {
         ticketId: ticket.id,
         organizationId: ticket.organizationId,
         ticketNumber: ticket.number,
@@ -108,6 +138,11 @@ export class SlaBreachCheckService {
         assigneeEmail: ticket.assignee?.email ?? null,
         assigneeFirstName: ticket.assignee?.firstName ?? null,
       });
+      await this.notifyAndBroadcast(
+        ticket,
+        NotificationType.SLA_BREACHED,
+        `Resolution SLA breached on ticket #${ticket.number}`,
+      );
     }
     return candidates.length;
   }
@@ -156,7 +191,7 @@ export class SlaBreachCheckService {
           },
         }),
       ]);
-      await this.notifications.add('breach', {
+      await this.emailQueue.add('breach', {
         ticketId: ticket.id,
         organizationId: ticket.organizationId,
         ticketNumber: ticket.number,
@@ -165,6 +200,11 @@ export class SlaBreachCheckService {
         assigneeEmail: ticket.assignee?.email ?? null,
         assigneeFirstName: ticket.assignee?.firstName ?? null,
       });
+      await this.notifyAndBroadcast(
+        ticket,
+        NotificationType.SLA_ESCALATED,
+        `Ticket #${ticket.number} auto-escalated to ${nextPriority}`,
+      );
       escalatedCount++;
     }
     return escalatedCount;

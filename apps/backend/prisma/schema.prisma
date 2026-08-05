@@ -36,6 +36,7 @@ model Organization {
   tags                   Tag[]
   businessHoursSchedules BusinessHoursSchedule[]
   slaPolicies            SlaPolicy[]
+  notifications          Notification[]
 
   @@map("organizations")
 }
@@ -127,6 +128,7 @@ model User {
   ticketsAssigned         Ticket[]                 @relation("TicketAssignee")
   comments                Comment[]
   ticketHistoryEntries    TicketHistory[]
+  notifications           Notification[]
 
   @@index([organizationId])
   @@map("users")
@@ -217,6 +219,37 @@ model AuditLog {
 }
 
 // ─────────────────────────────────────────────────────────────────────
+// Notifications
+// ─────────────────────────────────────────────────────────────────────
+
+enum NotificationType {
+  TICKET_ASSIGNED
+  TICKET_REPLY
+  SLA_BREACHED
+  SLA_ESCALATED
+}
+
+model Notification {
+  id             String           @id @default(uuid())
+  organizationId String
+  userId         String
+  type           NotificationType
+  title          String
+  body           String
+  ticketId       String?
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticket       Ticket?      @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt])
+  @@index([organizationId])
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // Tickets
 // ─────────────────────────────────────────────────────────────────────
 
@@ -274,9 +307,10 @@ model Ticket {
   splitFrom     Ticket?  @relation("TicketSplit", fields: [splitFromId], references: [id])
   splitTickets  Ticket[] @relation("TicketSplit")
 
-  comments Comment[]
-  tags     TicketTag[]
-  history  TicketHistory[]
+  comments      Comment[]
+  tags          TicketTag[]
+  history       TicketHistory[]
+  notifications Notification[]
 
   @@unique([organizationId, number])
   @@index([organizationId, status])
