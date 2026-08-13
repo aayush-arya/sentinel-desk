@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import type { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
 
 export interface AuditEntry {
   organizationId: string;
@@ -38,5 +39,27 @@ export class AuditService {
     } catch (error) {
       this.logger.error(`Failed to record audit log for action "${entry.action}"`, error);
     }
+  }
+
+  async findAll(organizationId: string, query: QueryAuditLogsDto) {
+    const where: Prisma.AuditLogWhereInput = { organizationId };
+    if (query.entityType) where.entityType = query.entityType;
+    if (query.action) where.action = { startsWith: query.action };
+
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 50;
+
+    const [items, total] = await Promise.all([
+      this.prisma.auditLog.findMany({
+        where,
+        include: { actor: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.auditLog.count({ where }),
+    ]);
+
+    return { items, meta: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) } };
   }
 }

@@ -398,6 +398,21 @@ export interface KnowledgeArticle {
   author: KnowledgeArticleAuthor;
 }
 
+// ── Audit log ──────────────────────────────────────────────────────────
+
+export interface AuditLogEntry {
+  id: string;
+  organizationId: string;
+  actorUserId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  metadata: Record<string, unknown>;
+  ipAddress: string | null;
+  createdAt: string;
+  actor: { id: string; firstName: string; lastName: string; avatarUrl: string | null } | null;
+}
+
 // ── Realtime & notifications ─────────────────────────────────────────
 
 export type NotificationType = 'TICKET_ASSIGNED' | 'TICKET_REPLY' | 'SLA_BREACHED' | 'SLA_ESCALATED';

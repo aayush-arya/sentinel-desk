@@ -18,6 +18,7 @@ import { StorageService } from '../storage/storage.service';
 import { SlaService } from '../sla/sla.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AuditService } from '../audit/audit.service';
 import { sanitizeRichText } from '../common/utils/sanitize-html.util';
 import { AI_ENRICHMENT_QUEUE } from '../ai/ai.constants';
 import type { AiEnrichmentJobData } from '../ai/ai-enrichment.processor';
@@ -63,6 +64,7 @@ export class TicketsService {
     private readonly sla: SlaService,
     private readonly realtime: RealtimeGateway,
     private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
     @InjectQueue(AI_ENRICHMENT_QUEUE) private readonly aiQueue: Queue<AiEnrichmentJobData>,
   ) {}
 
@@ -133,6 +135,14 @@ export class TicketsService {
 
     this.realtime.emitToOrg(user.organizationId, 'ticket:created', { ticketId: ticket.created.id });
     await this.aiQueue.add('ticket-created', { kind: 'ticket-created', ticketId: ticket.created.id });
+    await this.audit.record({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'ticket.created',
+      entityType: 'Ticket',
+      entityId: ticket.created.id,
+      metadata: { number: ticket.created.number, subject: dto.subject },
+    });
 
     return this.findOne(user, ticket.created.id);
   }
@@ -239,6 +249,27 @@ export class TicketsService {
     if (slaTransition === 'pause') await this.sla.pause(ticketId, user.id);
     else if (slaTransition === 'resume') await this.sla.resume(ticketId, user.id);
 
+    if (dto.priority && dto.priority !== ticket.priority) {
+      await this.audit.record({
+        organizationId: user.organizationId,
+        actorUserId: user.id,
+        action: 'ticket.priority_changed',
+        entityType: 'Ticket',
+        entityId: ticketId,
+        metadata: { from: ticket.priority, to: dto.priority },
+      });
+    }
+    if (dto.status && dto.status !== ticket.status) {
+      await this.audit.record({
+        organizationId: user.organizationId,
+        actorUserId: user.id,
+        action: 'ticket.status_changed',
+        entityType: 'Ticket',
+        entityId: ticketId,
+        metadata: { from: ticket.status, to: dto.status },
+      });
+    }
+
     this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
   }
@@ -263,6 +294,15 @@ export class TicketsService {
         data: { ticketId, actorId: user.id, action: TicketHistoryAction.REOPENED },
       }),
     ]);
+
+    await this.audit.record({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'ticket.reopened',
+      entityType: 'Ticket',
+      entityId: ticketId,
+      metadata: { previousStatus: ticket.status },
+    });
 
     this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
@@ -421,6 +461,14 @@ export class TicketsService {
         ticketId,
       });
     }
+    await this.audit.record({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: action === TicketHistoryAction.TRANSFERRED ? 'ticket.transferred' : 'ticket.assigned',
+      entityType: 'Ticket',
+      entityId: ticketId,
+      metadata: { from: ticket.assigneeId, to: dto.assigneeId },
+    });
     this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
   }
@@ -440,6 +488,14 @@ export class TicketsService {
         },
       }),
     ]);
+    await this.audit.record({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'ticket.unassigned',
+      entityType: 'Ticket',
+      entityId: ticketId,
+      metadata: { from: ticket.assigneeId },
+    });
     this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
   }
@@ -480,6 +536,14 @@ export class TicketsService {
         ticketId,
       });
     }
+    await this.audit.record({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'ticket.escalated',
+      entityType: 'Ticket',
+      entityId: ticketId,
+      metadata: { reason: dto.reason, priority: data.priority, newAssigneeId: dto.newAssigneeId ?? null },
+    });
     this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
   }
@@ -519,6 +583,14 @@ export class TicketsService {
       }),
     ]);
 
+    await this.audit.record({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'ticket.merged',
+      entityType: 'Ticket',
+      entityId: ticketId,
+      metadata: { intoTicketId: target.id, intoTicketNumber: target.number },
+    });
     this.broadcastTicketChanged(user.organizationId, ticketId);
     this.broadcastTicketChanged(user.organizationId, target.id);
     return this.findOne(user, ticketId);
@@ -583,6 +655,14 @@ export class TicketsService {
     });
 
     this.realtime.emitToOrg(user.organizationId, 'ticket:created', { ticketId: newTicketId });
+    await this.audit.record({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'ticket.split',
+      entityType: 'Ticket',
+      entityId: ticketId,
+      metadata: { newTicketId, commentIds: dto.commentIds },
+    });
     this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, newTicketId);
   }
