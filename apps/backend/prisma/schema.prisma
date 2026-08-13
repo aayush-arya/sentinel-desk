@@ -37,6 +37,7 @@ model Organization {
   businessHoursSchedules BusinessHoursSchedule[]
   slaPolicies            SlaPolicy[]
   notifications          Notification[]
+  knowledgeArticles      KnowledgeArticle[]
 
   @@map("organizations")
 }
@@ -129,6 +130,7 @@ model User {
   comments                Comment[]
   ticketHistoryEntries    TicketHistory[]
   notifications           Notification[]
+  knowledgeArticles       KnowledgeArticle[]
 
   @@index([organizationId])
   @@map("users")
@@ -517,4 +519,35 @@ model SlaPolicyRule {
 
   @@unique([policyId, priority])
   @@map("sla_policy_rules")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Knowledge base
+// ─────────────────────────────────────────────────────────────────────
+
+enum KnowledgeArticleStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model KnowledgeArticle {
+  id             String                 @id @default(uuid())
+  organizationId String
+  authorId       String
+  title          String
+  slug           String
+  // Sanitized HTML from the same TipTap editor + sanitize-html.util.ts pipeline as
+  // comment bodies — never raw user input.
+  body           String
+  status         KnowledgeArticleStatus @default(DRAFT)
+  viewCount      Int                    @default(0)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       User         @relation(fields: [authorId], references: [id])
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, status])
+  @@map("knowledge_articles")
 }

@@ -23,6 +23,18 @@ export interface DuplicateCandidateInput {
   firstCommentBody: string;
 }
 
+export interface KnowledgeArticleRecommendation {
+  articleId: string;
+  confidence: number; // 0-1
+  reasoning: string;
+}
+
+export interface KnowledgeArticleCandidateInput {
+  id: string;
+  title: string;
+  excerpt: string;
+}
+
 /**
  * Swappable AI backend — every method takes plain data (never Prisma models) so
  * providers stay implementations of a contract, not consumers of app internals.
@@ -43,4 +55,9 @@ export interface AiProvider {
     target: { subject: string; body: string },
     candidates: DuplicateCandidateInput[],
   ): Promise<DuplicateCandidate[]>;
+
+  recommendArticles(
+    target: { subject: string; body: string },
+    candidates: KnowledgeArticleCandidateInput[],
+  ): Promise<KnowledgeArticleRecommendation[]>;
 }

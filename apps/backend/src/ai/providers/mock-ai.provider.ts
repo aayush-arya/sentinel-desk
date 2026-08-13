@@ -4,6 +4,8 @@ import type {
   AiProvider,
   DuplicateCandidate,
   DuplicateCandidateInput,
+  KnowledgeArticleCandidateInput,
+  KnowledgeArticleRecommendation,
   PrioritySuggestion,
   TicketContext,
 } from '../ai-provider.interface';
@@ -116,5 +118,25 @@ export class MockAiProvider implements AiProvider {
       // still requiring substantial overlap, not just one or two shared words.
       .filter((d) => d.confidence >= 0.3)
       .sort((a, b) => b.confidence - a.confidence);
+  }
+
+  async recommendArticles(
+    target: { subject: string; body: string },
+    candidates: KnowledgeArticleCandidateInput[],
+  ): Promise<KnowledgeArticleRecommendation[]> {
+    const targetWords = wordSet(`${target.subject} ${target.body}`);
+    return candidates
+      .map((c) => ({
+        articleId: c.id,
+        confidence: Math.round(jaccard(targetWords, wordSet(`${c.title} ${c.excerpt}`)) * 100) / 100,
+        reasoning: 'Shares significant keywords with this ticket.',
+      }))
+      // Article titles are short, so raw word-overlap ratios run lower here than for
+      // ticket-vs-ticket duplicate detection even on a strong match (verified against a
+      // real "production payments outage" ticket + article pair, which scored 0.13) -
+      // 0.08 catches genuine keyword overlap without a length-dependent threshold.
+      .filter((r) => r.confidence >= 0.08)
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 5);
   }
 }

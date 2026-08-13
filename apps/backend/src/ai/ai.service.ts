@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { RoleName, TicketStatus } from '@prisma/client';
+import { KnowledgeArticleStatus, RoleName, TicketStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AI_PROVIDER } from './ai.constants';
@@ -13,9 +13,21 @@ export interface DuplicateCandidateResult {
   reasoning: string;
 }
 
+export interface ArticleRecommendationResult {
+  articleId: string;
+  title: string;
+  slug: string;
+  confidence: number;
+  reasoning: string;
+}
+
 // Bounded, not a full semantic search over every ticket ever filed — duplicates are
 // overwhelmingly likely to be recent and still open, and this keeps the prompt small.
 const DUPLICATE_CANDIDATE_POOL_SIZE = 30;
+
+// Same reasoning as duplicates - most orgs won't have hundreds of published articles,
+// and this keeps the recommendation prompt small and cheap.
+const KB_CANDIDATE_POOL_SIZE = 30;
 
 @Injectable()
 export class AiService {
@@ -102,6 +114,38 @@ export class AiService {
         return { ticketId: d.ticketId, ticketNumber: candidate.number, subject: candidate.subject, confidence: d.confidence, reasoning: d.reasoning };
       })
       .filter((d): d is DuplicateCandidateResult => d !== null);
+  }
+
+  async recommendKnowledgeArticles(organizationId: string, ticketId: string): Promise<ArticleRecommendationResult[]> {
+    const target = await this.prisma.ticket.findUniqueOrThrow({
+      where: { id: ticketId },
+      select: { subject: true, comments: { orderBy: { createdAt: 'asc' }, take: 1, select: { body: true } } },
+    });
+
+    const pool = await this.prisma.knowledgeArticle.findMany({
+      where: { organizationId, status: KnowledgeArticleStatus.PUBLISHED },
+      orderBy: { updatedAt: 'desc' },
+      take: KB_CANDIDATE_POOL_SIZE,
+      select: { id: true, title: true, slug: true, body: true },
+    });
+    if (pool.length === 0) return [];
+
+    const result = await this.safe('recommendKnowledgeArticles', () =>
+      this.provider.recommendArticles(
+        { subject: target.subject, body: target.comments[0]?.body ?? '' },
+        pool.map((a) => ({ id: a.id, title: a.title, excerpt: a.body })),
+      ),
+    );
+    if (!result) return [];
+
+    const byId = new Map(pool.map((a) => [a.id, a]));
+    return result
+      .map((r) => {
+        const article = byId.get(r.articleId);
+        if (!article) return null;
+        return { articleId: r.articleId, title: article.title, slug: article.slug, confidence: r.confidence, reasoning: r.reasoning };
+      })
+      .filter((r): r is ArticleRecommendationResult => r !== null);
   }
 
   /** Queued right after a ticket is created — see TicketsService.create and the AI enrichment processor. */

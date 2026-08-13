@@ -18,6 +18,7 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AiModule } from './ai/ai.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { KnowledgeBaseModule } from './knowledge-base/knowledge-base.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -70,6 +71,7 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
     NotificationsModule,
     AiModule,
     AnalyticsModule,
+    KnowledgeBaseModule,
     HealthModule,
   ],
   providers: [

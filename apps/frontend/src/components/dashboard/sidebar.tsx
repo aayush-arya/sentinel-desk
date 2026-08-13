@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Gauge, LayoutGrid, MessageSquare, Monitor, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react';
+import { BarChart3, BookOpen, Gauge, LayoutGrid, MessageSquare, Monitor, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react';
 import type { UserProfile } from '@sentinel-desk/types';
 import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ function getNavItems(user: UserProfile): NavItem[] {
   const items: NavItem[] = [
     { href: '/dashboard', label: 'Overview', icon: LayoutGrid },
     { href: '/dashboard/tickets', label: 'Tickets', icon: MessageSquare },
+    { href: '/dashboard/knowledge-base', label: 'Knowledge base', icon: BookOpen },
     { href: '/dashboard/sessions', label: 'Sessions', icon: Monitor },
   ];
   if (canViewSlaDashboard(user.role.name)) {

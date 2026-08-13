@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
-import { Copy, Loader2, Pencil, RotateCcw, Sparkles, X } from 'lucide-react';
+import { BookOpen, Copy, Loader2, Pencil, RotateCcw, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TicketComment, TicketCommentNewEvent, TicketDetail, TicketTypingEvent } from '@sentinel-desk/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTicket, useTicketHistory, useUpdateTicket, useReopenTicket, TICKET_KEY } from '@/hooks/use-tickets';
-import { useTicketSummary, useDuplicateCandidates } from '@/hooks/use-ai';
+import { useTicketSummary, useDuplicateCandidates, useKbSuggestions } from '@/hooks/use-ai';
 import { useRealtime } from '@/lib/realtime-context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ export default function TicketDetailPage() {
   const reopenTicket = useReopenTicket(params.id);
   const summarize = useTicketSummary(params.id);
   const duplicates = useDuplicateCandidates(params.id);
+  const kbSuggestions = useKbSuggestions(params.id);
   const { socket } = useRealtime();
   const queryClient = useQueryClient();
 
@@ -48,6 +49,7 @@ export default function TicketDetailPage() {
   const typingTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [showSummary, setShowSummary] = useState(false);
   const [showDuplicates, setShowDuplicates] = useState(false);
+  const [showKbSuggestions, setShowKbSuggestions] = useState(false);
 
   useEffect(() => {
     const ticketId = params.id;
@@ -257,6 +259,23 @@ export default function TicketDetailPage() {
               {duplicates.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Copy className="size-3.5" />}
               Check duplicates
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => {
+                setShowKbSuggestions(true);
+                kbSuggestions.mutate();
+              }}
+              disabled={kbSuggestions.isPending}
+            >
+              {kbSuggestions.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <BookOpen className="size-3.5" />
+              )}
+              Suggest articles
+            </Button>
           </div>
         )}
 
@@ -307,6 +326,36 @@ export default function TicketDetailPage() {
               </ul>
             ) : (
               <p className="text-sm text-muted-foreground">No likely duplicates found among recent open tickets.</p>
+            )}
+          </Card>
+        )}
+
+        {showKbSuggestions && (
+          <Card className="space-y-1.5 p-3">
+            <div className="flex items-center justify-between">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <BookOpen className="size-3.5" />
+                Suggested articles
+              </p>
+              <button type="button" onClick={() => setShowKbSuggestions(false)} aria-label="Dismiss suggestions">
+                <X className="size-3.5 text-muted-foreground" />
+              </button>
+            </div>
+            {kbSuggestions.isPending ? (
+              <Skeleton className="h-4 w-full" />
+            ) : kbSuggestions.data?.suggestions.length ? (
+              <ul className="space-y-1.5">
+                {kbSuggestions.data.suggestions.map((s) => (
+                  <li key={s.articleId} className="flex items-center justify-between gap-2 text-sm">
+                    <Link href={`/dashboard/knowledge-base/${s.articleId}`} className="truncate hover:underline">
+                      {s.title}
+                    </Link>
+                    <span className="shrink-0 text-xs text-muted-foreground">{Math.round(s.confidence * 100)}% match</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No relevant articles found in the knowledge base.</p>
             )}
           </Card>
         )}

@@ -348,6 +348,31 @@ export interface AnalyticsOverview {
   priorityBreakdown: AnalyticsPriorityBreakdown[];
 }
 
+// ── Knowledge base ────────────────────────────────────────────────────
+
+export type KnowledgeArticleStatus = 'DRAFT' | 'PUBLISHED';
+
+export interface KnowledgeArticleAuthor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+}
+
+export interface KnowledgeArticle {
+  id: string;
+  organizationId: string;
+  authorId: string;
+  title: string;
+  slug: string;
+  body: string;
+  status: KnowledgeArticleStatus;
+  viewCount: number;
+  createdAt: string;
+  updatedAt: string;
+  author: KnowledgeArticleAuthor;
+}
+
 // ── Realtime & notifications ─────────────────────────────────────────
 
 export type NotificationType = 'TICKET_ASSIGNED' | 'TICKET_REPLY' | 'SLA_BREACHED' | 'SLA_ESCALATED';
@@ -406,4 +431,16 @@ export interface AiDuplicateCandidate {
 
 export interface AiDuplicatesResponse {
   candidates: AiDuplicateCandidate[];
+}
+
+export interface AiKbSuggestion {
+  articleId: string;
+  title: string;
+  slug: string;
+  confidence: number;
+  reasoning: string;
+}
+
+export interface AiKbSuggestionsResponse {
+  suggestions: AiKbSuggestion[];
 }

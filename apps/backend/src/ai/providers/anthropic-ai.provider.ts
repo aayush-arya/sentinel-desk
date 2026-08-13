@@ -5,6 +5,8 @@ import type {
   AiProvider,
   DuplicateCandidate,
   DuplicateCandidateInput,
+  KnowledgeArticleCandidateInput,
+  KnowledgeArticleRecommendation,
   PrioritySuggestion,
   TicketContext,
 } from '../ai-provider.interface';
@@ -204,5 +206,49 @@ export class AnthropicAiProvider implements AiProvider {
     );
     const validIds = new Set(candidates.map((c) => c.id));
     return result.duplicates.filter((d) => validIds.has(d.ticketId));
+  }
+
+  async recommendArticles(
+    target: { subject: string; body: string },
+    candidates: KnowledgeArticleCandidateInput[],
+  ): Promise<KnowledgeArticleRecommendation[]> {
+    if (candidates.length === 0) return [];
+
+    const candidateList = candidates
+      .map((c) => `id=${c.id}: ${c.title}\n${stripHtml(c.excerpt).slice(0, 200)}`)
+      .join('\n\n');
+
+    const result = await this.completeTool<{ recommendations: KnowledgeArticleRecommendation[] }>(
+      'Given this support ticket, recommend which knowledge base articles (if any) would help ' +
+        'the agent resolve it or could be shared with the customer. Only include genuinely ' +
+        'relevant articles (confidence >= 0.4) — an empty list is the right answer when nothing ' +
+        'fits. Use the exact id given.',
+      `Ticket:\nSubject: ${target.subject}\n${stripHtml(target.body)}\n\nCandidate articles:\n${candidateList}`,
+      {
+        name: 'recommend_articles',
+        description: 'Record relevant knowledge base articles from the candidate list.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            recommendations: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  articleId: { type: 'string' },
+                  confidence: { type: 'number' },
+                  reasoning: { type: 'string' },
+                },
+                required: ['articleId', 'confidence', 'reasoning'],
+              },
+            },
+          },
+          required: ['recommendations'],
+        },
+      },
+      512,
+    );
+    const validIds = new Set(candidates.map((c) => c.id));
+    return result.recommendations.filter((r) => validIds.has(r.articleId));
   }
 }

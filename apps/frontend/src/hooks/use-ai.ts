@@ -1,5 +1,10 @@
 import { useMutation } from '@tanstack/react-query';
-import type { AiDuplicatesResponse, AiSuggestReplyResponse, AiSummaryResponse } from '@sentinel-desk/types';
+import type {
+  AiDuplicatesResponse,
+  AiKbSuggestionsResponse,
+  AiSuggestReplyResponse,
+  AiSummaryResponse,
+} from '@sentinel-desk/types';
 import { apiClient } from '@/lib/api-client';
 
 export function useTicketSummary(ticketId: string) {
@@ -24,6 +29,15 @@ export function useDuplicateCandidates(ticketId: string) {
   return useMutation({
     mutationFn: async () => {
       const { data } = await apiClient.post<AiDuplicatesResponse>(`/tickets/${ticketId}/ai/duplicates`);
+      return data;
+    },
+  });
+}
+
+export function useKbSuggestions(ticketId: string) {
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.post<AiKbSuggestionsResponse>(`/tickets/${ticketId}/ai/kb-suggestions`);
       return data;
     },
   });

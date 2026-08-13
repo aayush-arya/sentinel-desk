@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import {
   BarChart3,
+  BookOpen,
   Gauge,
   LayoutGrid,
   Loader2,
@@ -81,6 +82,7 @@ export function CommandPalette() {
     const items = [
       { href: '/dashboard', label: 'Overview', icon: LayoutGrid },
       { href: '/dashboard/tickets', label: 'Tickets', icon: MessageSquare },
+      { href: '/dashboard/knowledge-base', label: 'Knowledge base', icon: BookOpen },
       { href: '/dashboard/sessions', label: 'Sessions', icon: Monitor },
     ];
     if (canViewSlaDashboard(user.role.name)) {

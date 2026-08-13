@@ -49,4 +49,13 @@ export class AiController {
     const candidates = await this.ai.findDuplicates(user.organizationId, id);
     return { candidates };
   }
+
+  @RequireCsrf()
+  @Post('kb-suggestions')
+  @ApiOperation({ summary: 'Recommend published knowledge base articles relevant to this ticket' })
+  async kbSuggestions(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    await this.tickets.findOne(user, id);
+    const suggestions = await this.ai.recommendKnowledgeArticles(user.organizationId, id);
+    return { suggestions };
+  }
 }
