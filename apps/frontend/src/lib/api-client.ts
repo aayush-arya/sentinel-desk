@@ -14,11 +14,23 @@ function readCookie(name: string): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// The sd_csrf cookie is set on the backend's origin. In local dev, frontend and backend
+// share a site, so document.cookie can read it directly. On a real deployment they're on
+// different domains, and browsers never expose one origin's cookies to another's JS - so
+// document.cookie comes back empty there. Every endpoint that sets or rotates the session
+// (login, refresh, /users/me) also echoes the current csrfToken in its response body,
+// which works regardless of origin; callers feed it in here via setCsrfToken.
+let inMemoryCsrfToken: string | null = null;
+
+export function setCsrfToken(token: string | null) {
+  inMemoryCsrfToken = token;
+}
+
 const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete']);
 
 apiClient.interceptors.request.use((config) => {
   if (config.method && MUTATING_METHODS.has(config.method)) {
-    const csrfToken = readCookie('sd_csrf');
+    const csrfToken = inMemoryCsrfToken ?? readCookie('sd_csrf');
     if (csrfToken) config.headers.set('X-CSRF-Token', csrfToken);
   }
   return config;
@@ -46,9 +58,12 @@ apiClient.interceptors.response.use(
     original._retried = true;
 
     try {
-      refreshPromise ??= apiClient.post('/auth/refresh').finally(() => {
-        refreshPromise = null;
-      });
+      refreshPromise ??= apiClient
+        .post<{ csrfToken: string | null }>('/auth/refresh')
+        .then((res) => setCsrfToken(res.data.csrfToken))
+        .finally(() => {
+          refreshPromise = null;
+        });
       await refreshPromise;
       return apiClient(original);
     } catch (refreshError) {

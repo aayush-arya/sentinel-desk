@@ -5,12 +5,14 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
+import type { Request } from 'express';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { InviteUserDto } from './dto/invite-user.dto';
@@ -28,8 +30,15 @@ export class UsersController {
 
   @Get('me')
   @ApiOperation({ summary: "Get the current user's profile" })
-  me(@CurrentUser() user: AuthenticatedUser) {
-    return this.usersService.findProfile(user.id);
+  async me(@CurrentUser() user: AuthenticatedUser, @Req() req: Request) {
+    const profile = await this.usersService.findProfile(user.id);
+    // The CSRF cookie is set by the backend's domain, so frontend JS can only ever
+    // read it via document.cookie when frontend and backend share a site (local dev).
+    // On a real deployment (frontend on one origin, API on another) that read always
+    // comes back empty. Echoing the value here - which the browser DOES send back to
+    // us correctly regardless of origin - lets the frontend source it from a response
+    // body it can always read, then attach it to the X-CSRF-Token header itself.
+    return { ...profile, csrfToken: req.cookies?.sd_csrf ?? null };
   }
 
   @RequireCsrf()

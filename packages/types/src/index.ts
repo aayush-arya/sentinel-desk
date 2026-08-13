@@ -49,6 +49,13 @@ export interface UserProfile {
   createdAt: string;
   role: { name: RoleName; label: string };
   organization: OrganizationSummary;
+  /**
+   * Echoes the sd_csrf cookie back in the body. Cross-origin deployments (frontend and
+   * backend on different domains) can't read it via document.cookie, so the frontend
+   * sources its X-CSRF-Token header value from here instead. Null if no session cookie
+   * is present yet.
+   */
+  csrfToken: string | null;
 }
 
 export interface OrgMember {

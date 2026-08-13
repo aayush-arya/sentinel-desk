@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { LoginResponse } from '@sentinel-desk/types';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, setCsrfToken } from '@/lib/api-client';
 import { CURRENT_USER_QUERY_KEY } from './use-current-user';
 
 interface MessageResponse {
@@ -14,7 +14,8 @@ export function useLogin() {
       const { data } = await apiClient.post<LoginResponse>('/auth/login', payload);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setCsrfToken(data.csrfToken);
       // Login response shape (AuthUser) is a subset of the full profile (UserProfile),
       // so we invalidate and let /users/me refetch rather than seed the cache with it.
       queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY });
@@ -59,6 +60,7 @@ export function useLogout() {
       await apiClient.post('/auth/logout');
     },
     onSuccess: () => {
+      setCsrfToken(null);
       queryClient.setQueryData(CURRENT_USER_QUERY_KEY, undefined);
       queryClient.clear();
     },
@@ -108,7 +110,8 @@ export function useAcceptInvite() {
       const { data } = await apiClient.post<LoginResponse>('/auth/accept-invite', payload);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setCsrfToken(data.csrfToken);
       queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY });
     },
   });
