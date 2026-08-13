@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogOut, User as UserIcon } from 'lucide-react';
+import { LogOut, Search, User as UserIcon } from 'lucide-react';
 import type { UserProfile } from '@sentinel-desk/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import {
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationBell } from '@/components/dashboard/notification-bell';
 import { useLogout } from '@/hooks/use-auth';
+import { useUIStore } from '@/store/ui-store';
 
 function initials(user: UserProfile) {
   return `${user.firstName[0] ?? ''}${user.lastName[0] ?? ''}`.toUpperCase();
@@ -25,6 +26,7 @@ function initials(user: UserProfile) {
 export function DashboardTopbar({ user }: { user: UserProfile }) {
   const router = useRouter();
   const logout = useLogout();
+  const setCommandPaletteOpen = useUIStore((s) => s.setCommandPaletteOpen);
 
   const handleLogout = async () => {
     await logout.mutateAsync();
@@ -40,6 +42,15 @@ export function DashboardTopbar({ user }: { user: UserProfile }) {
       </div>
 
       <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setCommandPaletteOpen(true)}
+          className="mr-1 hidden items-center gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/70 sm:flex"
+        >
+          <Search className="size-3.5" />
+          <span>Search</span>
+          <kbd className="ml-1 rounded border border-border bg-background px-1 font-mono text-[10px]">⌘K</kbd>
+        </button>
         <NotificationBell />
         <ThemeToggle />
         <DropdownMenu>

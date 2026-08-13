@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { DashboardSidebar } from '@/components/dashboard/sidebar';
 import { DashboardTopbar } from '@/components/dashboard/topbar';
+import { CommandPalette } from '@/components/command-palette';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -30,6 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <DashboardTopbar user={user} />
         <main className="flex-1 overflow-y-auto bg-background p-4 md:p-6">{children}</main>
       </div>
+      <CommandPalette />
     </div>
   );
 }
