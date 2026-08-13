@@ -8,7 +8,7 @@ import type {
 } from '@sentinel-desk/types';
 import { apiClient } from '@/lib/api-client';
 
-export function useSlaDashboard() {
+export function useSlaDashboard(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['sla', 'dashboard'],
     queryFn: async () => {
@@ -16,6 +16,7 @@ export function useSlaDashboard() {
       return data;
     },
     refetchInterval: 60_000,
+    enabled: options?.enabled ?? true,
   });
 }
 

@@ -14,10 +14,14 @@ auth, RBAC, and audit logging already in place.
 ## Tech stack
 
 **Frontend** — Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui ·
-Framer Motion · React Hook Form + Zod · TanStack Query · Zustand
+Framer Motion · React Hook Form + Zod · TanStack Query · Zustand · TipTap rich text editor
 
-**Backend** — NestJS · Prisma ORM · PostgreSQL · Redis · JWT + Passport · class-validator ·
-Swagger
+**Backend** — NestJS · Prisma ORM · PostgreSQL · Redis · BullMQ · Socket.IO · JWT + Passport ·
+class-validator · Swagger · Nodemailer · MinIO/S3-compatible storage
+
+**AI** — provider-abstracted (Anthropic today, swappable), used for ticket summarization,
+suggested replies, sentiment analysis, priority suggestion, duplicate detection, and tag
+suggestion
 
 **Infrastructure** — Docker Compose (Postgres, Redis, MinIO, MailHog) · pnpm workspaces
 
@@ -102,17 +106,32 @@ all using the password `Password123!`:
   permission-gated server-side, not just hidden in the UI.
 - **Frontend**: branded marketing page, full auth flow UI, dashboard shell with role-aware
   navigation, light/dark theming, all wired to the real API (no mock data).
+- **Ticket system**: create/edit/reply/reopen, file attachments, assignment & transfer, private
+  internal notes, merge & split, escalation, tags, full per-ticket history timeline.
+- **SLA engine**: timezone-aware business hours + holiday calendar, per-priority response/
+  resolution targets, pause/resume, automatic breach detection (cron sweep), automatic
+  escalation, SLA compliance dashboard, violation reports.
+- **Realtime layer**: Socket.IO gateway (cookie-JWT authenticated) driving live ticket updates,
+  typing indicators, presence, and notification delivery.
+- **AI features**: ticket summarization, suggested replies, sentiment detection, priority
+  suggestion, duplicate detection, and tag suggestion, behind a swappable provider interface.
 
 ## Roadmap
 
 - [x] Monorepo scaffold, Docker infra, CI-ready tooling
 - [x] Multi-tenant auth, RBAC, sessions, audit logging
 - [x] Frontend auth UI + dashboard shell
-- [ ] Ticket system: CRUD, comments, attachments, assignment, merge/split, escalation
-- [ ] SLA engine: business hours, holiday calendar, breach detection, auto-escalation
-- [ ] Realtime layer: Socket.IO presence, typing indicators, live updates
-- [ ] AI features: summarization, suggested replies, sentiment, priority, duplicate detection
-- [ ] Role-specific dashboards (Customer / Agent / Manager / Admin) with real analytics
-- [ ] Global search, saved filters, CSV/PDF export
-- [ ] Enterprise extras: macros, webhooks, API keys, public REST API, kanban, calendar
-- [ ] CI pipeline, test coverage, deployment guide, architecture & ER diagrams
+- [x] Ticket system: CRUD, comments, attachments, assignment, merge/split, escalation
+- [x] SLA engine: business hours, holiday calendar, breach detection, auto-escalation
+- [x] Realtime layer: Socket.IO presence, typing indicators, live updates
+- [x] AI features: summarization, suggested replies, sentiment, priority, duplicate detection
+- [ ] Role-specific dashboards (Customer / Agent / Manager / Admin) with real analytics — one
+      generic dashboard exists today; Recharts is installed but not yet wired up
+- [ ] Command palette (Ctrl+K) and kanban board — `cmdk` and `react-dnd` are installed
+      dependencies, not yet implemented
+- [ ] Knowledge base module (article CRUD + AI recommendations)
+- [ ] Global full-text search, saved filters, CSAT, saved-reply macros
+- [ ] CSV/PDF export, webhooks, API keys, public REST API
+- [ ] Audit log coverage for ticket actions (currently only in per-ticket history, not the
+      org-wide audit log)
+- [ ] Dockerfiles for containerized deploys, GitHub Actions CI, architecture & ER diagrams

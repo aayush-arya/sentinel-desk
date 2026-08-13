@@ -23,6 +23,15 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
+const DEMO_PASSWORD = 'Password123!';
+const DEMO_ACCOUNTS = [
+  { role: 'Admin', email: 'admin@acme.com' },
+  { role: 'Manager', email: 'manager@acme.com' },
+  { role: 'Senior Agent', email: 'senior@acme.com' },
+  { role: 'Support Agent', email: 'agent@acme.com' },
+  { role: 'Customer', email: 'customer@acme.com' },
+];
+
 export default function LoginPage() {
   return (
     <Suspense>
@@ -125,6 +134,28 @@ function LoginForm() {
           Create one
         </Link>
       </p>
+
+      <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
+        <p className="text-xs font-medium text-muted-foreground">
+          Exploring the demo? One click fills the form — password is the same for every role.
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {DEMO_ACCOUNTS.map((account) => (
+            <button
+              key={account.email}
+              type="button"
+              onClick={() => {
+                setValue('email', account.email);
+                setValue('password', DEMO_PASSWORD);
+                setFormError(null);
+              }}
+              className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              {account.role}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

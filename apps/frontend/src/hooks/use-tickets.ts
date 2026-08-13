@@ -26,16 +26,29 @@ const TICKETS_KEY = (filters: TicketFilters) => ['tickets', filters] as const;
 export const TICKET_KEY = (id: string) => ['tickets', id] as const;
 const TICKET_HISTORY_KEY = (id: string) => ['tickets', id, 'history'] as const;
 
+// The backend's global ValidationPipe (forbidNonWhitelisted) rejects bracket-notation
+// array keys, and Express 5's default query parser doesn't expand them anyway — so
+// array filters must be sent as repeated bare keys (status=A&status=B), which axios's
+// default array serialization does NOT produce. Build the query string ourselves.
+function toTicketSearchParams(filters: TicketFilters): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === undefined || value === null) continue;
+    if (Array.isArray(value)) {
+      for (const item of value) params.append(key, String(item));
+    } else {
+      params.append(key, String(value));
+    }
+  }
+  return params;
+}
+
 export function useTickets(filters: TicketFilters) {
   return useQuery({
     queryKey: TICKETS_KEY(filters),
     queryFn: async () => {
       const { data } = await apiClient.get<PaginatedResult<TicketSummary>>('/tickets', {
-        params: {
-          ...filters,
-          status: filters.status?.join(','),
-          priority: filters.priority?.join(','),
-        },
+        params: toTicketSearchParams(filters),
       });
       return data;
     },
