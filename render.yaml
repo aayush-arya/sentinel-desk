@@ -22,8 +22,18 @@ services:
     # it's safe to run on every deploy/restart, not just the first one. This keeps
     # the demo accounts (admin@acme.com etc., password Password123!) present even
     # after a database reset, so the login page's one-click demo buttons always work.
+    #
+    # The retry loop around migrate deploy exists because Neon's serverless Postgres
+    # suspends when idle - the first connection after a suspend has to wake the
+    # compute, which routinely takes longer than Prisma's ~10s advisory-lock timeout
+    # (P1002) on a cold database. Retrying a few seconds later hits an already-awake
+    # database and succeeds; a bare single attempt fails deploys intermittently.
     startCommand: >-
-      npx pnpm@latest --filter @sentinel-desk/backend exec prisma migrate deploy &&
+      for i in 1 2 3 4 5; do
+      npx pnpm@latest --filter @sentinel-desk/backend exec prisma migrate deploy && break;
+      echo "migrate deploy attempt $i failed (likely a cold Neon database) - retrying in 8s...";
+      sleep 8;
+      done &&
       npx pnpm@latest --filter @sentinel-desk/backend exec prisma db seed &&
       node apps/backend/dist/main.js
     healthCheckPath: /api/health
