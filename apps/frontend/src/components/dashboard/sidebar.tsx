@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, BookOpen, Gauge, LayoutGrid, MessageSquare, Monitor, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react';
+import { BarChart3, BookOpen, Gauge, LayoutGrid, MessageSquare, MessagesSquare, Monitor, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react';
 import type { UserProfile } from '@sentinel-desk/types';
 import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,9 @@ function getNavItems(user: UserProfile): NavItem[] {
     { href: '/dashboard/knowledge-base', label: 'Knowledge base', icon: BookOpen },
     { href: '/dashboard/sessions', label: 'Sessions', icon: Monitor },
   ];
+  if (user.role.name !== 'CUSTOMER') {
+    items.splice(3, 0, { href: '/dashboard/macros', label: 'Saved replies', icon: MessagesSquare });
+  }
   if (canViewSlaDashboard(user.role.name)) {
     items.splice(2, 0, { href: '/dashboard/sla', label: 'SLA', icon: Gauge });
     items.splice(2, 0, { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 });

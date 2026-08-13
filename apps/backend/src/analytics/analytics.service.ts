@@ -24,7 +24,7 @@ export class AnalyticsService {
   async getOverview(organizationId: string, days: number) {
     const since = new Date(Date.now() - days * DAY_MS);
 
-    const [tickets, statusGroups, priorityGroups] = await Promise.all([
+    const [tickets, statusGroups, priorityGroups, csatAggregate] = await Promise.all([
       this.prisma.ticket.findMany({
         where: {
           organizationId,
@@ -34,6 +34,8 @@ export class AnalyticsService {
           createdAt: true,
           resolvedAt: true,
           firstResponseAt: true,
+          csatRating: true,
+          csatRatedAt: true,
         },
       }),
       this.prisma.ticket.groupBy({
@@ -45,6 +47,13 @@ export class AnalyticsService {
         by: ['priority'],
         where: { organizationId },
         _count: { _all: true },
+      }),
+      // Rated in the window, not created/resolved in it — a ticket rated today about
+      // work closed weeks ago should still count toward "how are we doing lately".
+      this.prisma.ticket.aggregate({
+        where: { organizationId, csatRatedAt: { gte: since } },
+        _avg: { csatRating: true },
+        _count: { csatRating: true },
       }),
     ]);
 
@@ -105,6 +114,8 @@ export class AnalyticsService {
         priority,
         count: priorityCounts[priority] ?? 0,
       })),
+      avgCsat: csatAggregate._avg.csatRating != null ? Math.round(csatAggregate._avg.csatRating * 10) / 10 : null,
+      csatResponseCount: csatAggregate._count.csatRating,
     };
   }
 }

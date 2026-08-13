@@ -19,6 +19,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { Star } from 'lucide-react';
 import { TICKET_PRIORITY_LABELS, TICKET_STATUS_LABELS } from '@sentinel-desk/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useAnalyticsOverview } from '@/hooks/use-analytics';
@@ -88,6 +89,34 @@ export default function AnalyticsPage() {
           </SelectContent>
         </Select>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Customer satisfaction</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <Skeleton className="h-8 w-24" />
+          ) : data?.avgCsat != null ? (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Star
+                    key={n}
+                    className={`size-4 ${n <= Math.round(data.avgCsat!) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`}
+                  />
+                ))}
+              </div>
+              <span className="text-lg font-semibold">{data.avgCsat.toFixed(1)}</span>
+              <span className="text-xs text-muted-foreground">
+                from {data.csatResponseCount} rating{data.csatResponseCount === 1 ? '' : 's'} in this window
+              </span>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No customer ratings in this window yet.</p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

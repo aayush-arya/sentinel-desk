@@ -1,16 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Paperclip, Sparkles, X } from 'lucide-react';
+import { Loader2, MessagesSquare, Paperclip, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CommentVisibility } from '@sentinel-desk/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { getApiErrorMessage } from '@/lib/api-client';
 import { useAddComment } from '@/hooks/use-tickets';
 import { useSuggestReply } from '@/hooks/use-ai';
+import { useMacros } from '@/hooks/use-macros';
 import { useRealtime } from '@/lib/realtime-context';
 
 // How long to wait after the last keystroke before telling other viewers we stopped typing.
@@ -30,10 +32,17 @@ export function ReplyComposer({
   const [files, setFiles] = useState<File[]>([]);
   const addComment = useAddComment(ticketId);
   const suggestReply = useSuggestReply(ticketId);
+  const { data: macros } = useMacros();
   const { socket } = useRealtime();
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [macrosOpen, setMacrosOpen] = useState(false);
 
   const isEmpty = !body || body === '<p></p>';
+
+  const insertMacro = (macroBody: string) => {
+    setBody((prev) => (isEmpty ? macroBody : `${prev}${macroBody}`));
+    setMacrosOpen(false);
+  };
 
   const stopTyping = useCallback(() => {
     if (!typingTimeoutRef.current) return;
@@ -108,23 +117,54 @@ export function ReplyComposer({
               Internal note
             </button>
           </div>
-          {visibility === 'PUBLIC' && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
-              onClick={handleSuggestReply}
-              disabled={suggestReply.isPending}
-            >
-              {suggestReply.isPending ? (
-                <Loader2 className="size-3 animate-spin" />
-              ) : (
-                <Sparkles className="size-3" />
-              )}
-              Suggest reply
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            <Popover open={macrosOpen} onOpenChange={setMacrosOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <MessagesSquare className="size-3" />
+                  Insert macro
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-1" align="start">
+                {macros?.length ? (
+                  macros.map((macro) => (
+                    <button
+                      key={macro.id}
+                      type="button"
+                      onClick={() => insertMacro(macro.body)}
+                      className="block w-full truncate rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                    >
+                      {macro.title}
+                    </button>
+                  ))
+                ) : (
+                  <p className="px-2 py-1.5 text-xs text-muted-foreground">No saved replies yet</p>
+                )}
+              </PopoverContent>
+            </Popover>
+            {visibility === 'PUBLIC' && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={handleSuggestReply}
+                disabled={suggestReply.isPending}
+              >
+                {suggestReply.isPending ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <Sparkles className="size-3" />
+                )}
+                Suggest reply
+              </Button>
+            )}
+          </div>
         </div>
       )}
 

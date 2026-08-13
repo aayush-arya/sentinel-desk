@@ -38,6 +38,7 @@ model Organization {
   slaPolicies            SlaPolicy[]
   notifications          Notification[]
   knowledgeArticles      KnowledgeArticle[]
+  macros                 Macro[]
 
   @@map("organizations")
 }
@@ -131,6 +132,8 @@ model User {
   ticketHistoryEntries    TicketHistory[]
   notifications           Notification[]
   knowledgeArticles       KnowledgeArticle[]
+  macros                  Macro[]
+  savedFilters            SavedFilter[]
 
   @@index([organizationId])
   @@map("users")
@@ -295,6 +298,12 @@ model Ticket {
   resolutionBreached Boolean   @default(false)
   slaPausedAt        DateTime?
   slaEscalatedAt     DateTime?
+
+  // Customer satisfaction — set once by the requester after the ticket is
+  // RESOLVED/CLOSED (see tickets/csat.service.ts). 1-5, never staff-editable.
+  csatRating  Int?
+  csatComment String?
+  csatRatedAt DateTime?
 
   // Advisory only, set once asynchronously right after creation (see
   // ai/ai-enrichment.processor.ts) — never overwrites the real priority/tags an
@@ -550,4 +559,40 @@ model KnowledgeArticle {
   @@unique([organizationId, slug])
   @@index([organizationId, status])
   @@map("knowledge_articles")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Saved replies (macros) & saved filters
+// ─────────────────────────────────────────────────────────────────────
+
+model Macro {
+  id             String   @id @default(uuid())
+  organizationId String
+  authorId       String
+  title          String
+  body           String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       User         @relation(fields: [authorId], references: [id])
+
+  @@index([organizationId])
+  @@map("macros")
+}
+
+model SavedFilter {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  // Arbitrary QueryTicketsDto-shaped filter state (status/priority/assignee/search/etc)
+  // - a personal view, not something other roles need to see or the schema needs to
+  // model field-by-field.
+  filters   Json
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@map("saved_filters")
 }

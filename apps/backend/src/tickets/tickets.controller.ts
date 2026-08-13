@@ -19,6 +19,7 @@ import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { AssignTicketDto } from './dto/assign-ticket.dto';
 import { EscalateTicketDto } from './dto/escalate-ticket.dto';
+import { RateCsatDto } from './dto/rate-csat.dto';
 import { MergeTicketDto } from './dto/merge-ticket.dto';
 import { SplitTicketDto } from './dto/split-ticket.dto';
 import { QueryTicketsDto } from './dto/query-tickets.dto';
@@ -76,6 +77,13 @@ export class TicketsController {
   @ApiOperation({ summary: 'Reopen a resolved or closed ticket' })
   reopen(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.ticketsService.reopen(user, id);
+  }
+
+  @RequireCsrf()
+  @Post(':id/csat')
+  @ApiOperation({ summary: 'Rate a resolved/closed ticket 1-5 (requester only, once)' })
+  rateCsat(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: RateCsatDto) {
+    return this.ticketsService.rateCsat(user, id, dto);
   }
 
   @RequireCsrf()

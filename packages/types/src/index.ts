@@ -204,6 +204,9 @@ export interface TicketDetail {
   updatedAt: string;
   aiSuggestedPriority: TicketPriority | null;
   aiSuggestedTags: string[];
+  csatRating: number | null;
+  csatComment: string | null;
+  csatRatedAt: string | null;
 }
 
 export interface PaginatedResult<T> {
@@ -346,6 +349,28 @@ export interface AnalyticsOverview {
   responseTime: AnalyticsResponseTimePoint[];
   statusBreakdown: AnalyticsStatusBreakdown[];
   priorityBreakdown: AnalyticsPriorityBreakdown[];
+  avgCsat: number | null;
+  csatResponseCount: number;
+}
+
+// ── Macros & saved filters ────────────────────────────────────────────
+
+export interface Macro {
+  id: string;
+  organizationId: string;
+  authorId: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SavedFilter {
+  id: string;
+  userId: string;
+  name: string;
+  filters: Record<string, unknown>;
+  createdAt: string;
 }
 
 // ── Knowledge base ────────────────────────────────────────────────────

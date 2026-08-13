@@ -24,6 +24,7 @@ import { EscalateDialog } from '@/components/tickets/escalate-dialog';
 import { MergeDialog } from '@/components/tickets/merge-dialog';
 import { SplitDialog } from '@/components/tickets/split-dialog';
 import { HistoryTimeline } from '@/components/tickets/history-timeline';
+import { CsatRating } from '@/components/tickets/csat-rating';
 import { getApiErrorMessage } from '@/lib/api-client';
 
 // A stopped/dropped connection can miss a `typing:stop` event — this bounds how
@@ -394,6 +395,8 @@ export default function TicketDetailPage() {
         <Card className="p-4">
           <TicketSidebar ticket={ticket} isStaff={isStaff} />
         </Card>
+
+        <CsatRating ticket={ticket} canRate={!isStaff && isClosed} />
 
         {isStaff && (
           <Card className="space-y-1.5 p-3">

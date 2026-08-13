@@ -153,6 +153,17 @@ export function useReopenTicket(ticketId: string) {
   });
 }
 
+export function useRateCsat(ticketId: string) {
+  const invalidate = useInvalidateTicket(ticketId);
+  return useMutation({
+    mutationFn: async (payload: { rating: number; comment?: string }) => {
+      const { data } = await apiClient.post<TicketDetail>(`/tickets/${ticketId}/csat`, payload);
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
 export function useAddComment(ticketId: string) {
   const invalidate = useInvalidateTicket(ticketId);
   return useMutation({

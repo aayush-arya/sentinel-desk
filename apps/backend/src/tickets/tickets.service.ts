@@ -28,6 +28,7 @@ import type { UpdateTicketDto } from './dto/update-ticket.dto';
 import type { CreateCommentDto } from './dto/create-comment.dto';
 import type { AssignTicketDto } from './dto/assign-ticket.dto';
 import type { EscalateTicketDto } from './dto/escalate-ticket.dto';
+import type { RateCsatDto } from './dto/rate-csat.dto';
 import type { MergeTicketDto } from './dto/merge-ticket.dto';
 import type { SplitTicketDto } from './dto/split-ticket.dto';
 import type { QueryTicketsDto } from './dto/query-tickets.dto';
@@ -262,6 +263,27 @@ export class TicketsService {
         data: { ticketId, actorId: user.id, action: TicketHistoryAction.REOPENED },
       }),
     ]);
+
+    this.broadcastTicketChanged(user.organizationId, ticketId);
+    return this.findOne(user, ticketId);
+  }
+
+  async rateCsat(user: AuthenticatedUser, ticketId: string, dto: RateCsatDto) {
+    const ticket = await this.getTicketOrThrow(user, ticketId, TICKET_LIST_INCLUDE);
+    // getTicketOrThrow already 404s a customer trying to reach someone else's ticket,
+    // so the only remaining check is that staff can't rate on a customer's behalf.
+    if (isStaff(user)) throw new ForbiddenException('Only the requester can rate a ticket');
+    if (ticket.status !== TicketStatus.RESOLVED && ticket.status !== TicketStatus.CLOSED) {
+      throw new BadRequestException('Ticket must be resolved or closed before it can be rated');
+    }
+    if (ticket.csatRatedAt) {
+      throw new BadRequestException('This ticket has already been rated');
+    }
+
+    await this.prisma.ticket.update({
+      where: { id: ticketId },
+      data: { csatRating: dto.rating, csatComment: dto.comment, csatRatedAt: new Date() },
+    });
 
     this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
@@ -711,6 +733,9 @@ export class TicketsService {
       updatedAt: ticket.updatedAt,
       aiSuggestedPriority: staff ? ticket.aiSuggestedPriority : null,
       aiSuggestedTags: staff ? ticket.aiSuggestedTags : [],
+      csatRating: ticket.csatRating,
+      csatComment: ticket.csatComment,
+      csatRatedAt: ticket.csatRatedAt,
     };
   }
 }

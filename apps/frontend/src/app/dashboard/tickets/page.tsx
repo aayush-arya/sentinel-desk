@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-badges';
 import { KanbanBoard } from '@/components/tickets/kanban-board';
+import { SavedFiltersMenu, type TicketFilterState } from '@/components/tickets/saved-filters-menu';
 import { cn } from '@/lib/utils';
 
 const STATUS_OPTIONS: { value: TicketStatus | 'ALL'; label: string }[] = [
@@ -67,6 +68,16 @@ function TicketsPageContent() {
     const params = new URLSearchParams(searchParams.toString());
     if (value === 'ALL' || !value) params.delete(key);
     else params.set(key, value);
+    router.push(`/dashboard/tickets?${params.toString()}`);
+  };
+
+  const applySavedFilter = (filters: TicketFilterState) => {
+    const params = new URLSearchParams();
+    if (filters.status) params.set('status', filters.status);
+    if (filters.priority) params.set('priority', filters.priority);
+    if (filters.assignee) params.set('assignee', filters.assignee);
+    if (filters.search) params.set('search', filters.search);
+    setSearch(filters.search ?? '');
     router.push(`/dashboard/tickets?${params.toString()}`);
   };
 
@@ -135,6 +146,10 @@ function TicketsPageContent() {
             </SelectContent>
           </Select>
         )}
+        <SavedFiltersMenu
+          currentFilters={{ status: status ?? undefined, priority: priority ?? undefined, assignee, search: search || undefined }}
+          onApply={applySavedFilter}
+        />
         {staff && (
           <div className="ml-auto flex items-center gap-1 rounded-lg border border-border p-0.5">
             <button
