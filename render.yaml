@@ -18,8 +18,13 @@ services:
       npx pnpm@latest install --frozen-lockfile --prod=false &&
       npx pnpm@latest --filter @sentinel-desk/backend exec prisma generate &&
       npx pnpm@latest --filter @sentinel-desk/backend build
+    # `prisma db seed` is idempotent (upserts throughout - see prisma/seed.ts), so
+    # it's safe to run on every deploy/restart, not just the first one. This keeps
+    # the demo accounts (admin@acme.com etc., password Password123!) present even
+    # after a database reset, so the login page's one-click demo buttons always work.
     startCommand: >-
       npx pnpm@latest --filter @sentinel-desk/backend exec prisma migrate deploy &&
+      npx pnpm@latest --filter @sentinel-desk/backend exec prisma db seed &&
       node apps/backend/dist/main.js
     healthCheckPath: /api/health
     envVars:
