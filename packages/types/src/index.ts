@@ -317,6 +317,37 @@ export interface SlaViolationTicket {
   updatedAt: string;
 }
 
+// ── Analytics ──────────────────────────────────────────────────────────
+
+export interface AnalyticsVolumePoint {
+  date: string;
+  created: number;
+  resolved: number;
+}
+
+export interface AnalyticsResponseTimePoint {
+  date: string;
+  avgResponseMinutes: number | null;
+  avgResolutionMinutes: number | null;
+}
+
+export interface AnalyticsStatusBreakdown {
+  status: TicketStatus;
+  count: number;
+}
+
+export interface AnalyticsPriorityBreakdown {
+  priority: TicketPriority;
+  count: number;
+}
+
+export interface AnalyticsOverview {
+  volume: AnalyticsVolumePoint[];
+  responseTime: AnalyticsResponseTimePoint[];
+  statusBreakdown: AnalyticsStatusBreakdown[];
+  priorityBreakdown: AnalyticsPriorityBreakdown[];
+}
+
 // ── Realtime & notifications ─────────────────────────────────────────
 
 export type NotificationType = 'TICKET_ASSIGNED' | 'TICKET_REPLY' | 'SLA_BREACHED' | 'SLA_ESCALATED';

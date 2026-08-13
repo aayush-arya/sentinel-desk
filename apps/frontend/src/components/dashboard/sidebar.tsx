@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Gauge, LayoutGrid, MessageSquare, Monitor, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react';
+import { BarChart3, Gauge, LayoutGrid, MessageSquare, Monitor, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react';
 import type { UserProfile } from '@sentinel-desk/types';
 import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ function getNavItems(user: UserProfile): NavItem[] {
   ];
   if (canViewSlaDashboard(user.role.name)) {
     items.splice(2, 0, { href: '/dashboard/sla', label: 'SLA', icon: Gauge });
+    items.splice(2, 0, { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 });
   }
   if (canManageTeam(user.role.name)) {
     items.splice(2, 0, { href: '/dashboard/team', label: 'Team', icon: Users });

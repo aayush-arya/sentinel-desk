@@ -47,9 +47,17 @@ export function ManagerDashboard({ user }: { user: UserProfile }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Welcome back, {user.firstName}</h1>
-        <p className="text-sm text-muted-foreground">Team performance and SLA compliance across the organization.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Welcome back, {user.firstName}</h1>
+          <p className="text-sm text-muted-foreground">Team performance and SLA compliance across the organization.</p>
+        </div>
+        <Link
+          href="/dashboard/analytics"
+          className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted/50"
+        >
+          Full analytics
+        </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
