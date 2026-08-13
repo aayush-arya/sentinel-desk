@@ -115,6 +115,22 @@ export function useCreateTicket() {
   });
 }
 
+// Unlike useUpdateTicket, not scoped to one ticket id up front - the kanban board
+// needs a single mutation instance it can fire with whichever ticket was just dropped.
+export function useUpdateTicketStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ticketId, status }: { ticketId: string; status: TicketStatus }) => {
+      const { data } = await apiClient.patch<TicketDetail>(`/tickets/${ticketId}`, { status });
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: TICKET_KEY(variables.ticketId) });
+      queryClient.invalidateQueries({ queryKey: ['tickets'], exact: false });
+    },
+  });
+}
+
 export function useUpdateTicket(ticketId: string) {
   const invalidate = useInvalidateTicket(ticketId);
   return useMutation({

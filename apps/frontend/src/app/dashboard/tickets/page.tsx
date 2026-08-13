@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { MessageSquare, Plus, Search } from 'lucide-react';
+import { Columns3, List as ListIcon, MessageSquare, Plus, Search } from 'lucide-react';
 import type { TicketPriority, TicketStatus } from '@sentinel-desk/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTickets } from '@/hooks/use-tickets';
@@ -14,6 +14,8 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-badges';
+import { KanbanBoard } from '@/components/tickets/kanban-board';
+import { cn } from '@/lib/utils';
 
 const STATUS_OPTIONS: { value: TicketStatus | 'ALL'; label: string }[] = [
   { value: 'ALL', label: 'All statuses' },
@@ -45,6 +47,7 @@ function TicketsPageContent() {
   const searchParams = useSearchParams();
   const { data: user } = useCurrentUser();
   const [search, setSearch] = useState(searchParams.get('search') ?? '');
+  const [view, setView] = useState<'list' | 'board'>('list');
 
   const status = searchParams.get('status') as TicketStatus | null;
   const priority = searchParams.get('priority') as TicketPriority | null;
@@ -132,8 +135,37 @@ function TicketsPageContent() {
             </SelectContent>
           </Select>
         )}
+        {staff && (
+          <div className="ml-auto flex items-center gap-1 rounded-lg border border-border p-0.5">
+            <button
+              type="button"
+              onClick={() => setView('list')}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                view === 'list' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <ListIcon className="size-3.5" />
+              List
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('board')}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                view === 'board' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Columns3 className="size-3.5" />
+              Board
+            </button>
+          </div>
+        )}
       </div>
 
+      {staff && view === 'board' ? (
+        <KanbanBoard filters={{ priority: priority ? [priority] : undefined, assignee, search: search || undefined }} />
+      ) : (
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="space-y-2 p-4">
@@ -201,6 +233,7 @@ function TicketsPageContent() {
           </div>
         )}
       </Card>
+      )}
     </div>
   );
 }
