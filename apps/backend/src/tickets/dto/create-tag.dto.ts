@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsHexColor, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsHexColor,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateTagDto {
   @ApiProperty({ example: 'billing' })

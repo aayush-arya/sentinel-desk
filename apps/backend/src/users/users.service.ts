@@ -27,7 +27,11 @@ const ALLOWED_INVITE_ROLES: Record<RoleName, RoleName[]> = {
     RoleName.MANAGER,
     RoleName.ADMIN,
   ],
-  [RoleName.MANAGER]: [RoleName.CUSTOMER, RoleName.AGENT, RoleName.SENIOR_AGENT],
+  [RoleName.MANAGER]: [
+    RoleName.CUSTOMER,
+    RoleName.AGENT,
+    RoleName.SENIOR_AGENT,
+  ],
   [RoleName.SENIOR_AGENT]: [],
   [RoleName.AGENT]: [],
   [RoleName.CUSTOMER]: [],
@@ -68,12 +72,20 @@ export class UsersService {
       throw new BadRequestException('Avatar must be smaller than 5MB');
     }
 
-    const current = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    const current = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
     const ext = (file.originalname.split('.').pop() ?? 'png').toLowerCase();
     const key = `avatars/${userId}-${Date.now()}.${ext}`;
-    const url = await this.storage.uploadBuffer(key, file.buffer, file.mimetype);
+    const url = await this.storage.uploadBuffer(
+      key,
+      file.buffer,
+      file.mimetype,
+    );
 
-    const previousKey = current.avatarUrl ? this.storage.keyFromUrl(current.avatarUrl) : null;
+    const previousKey = current.avatarUrl
+      ? this.storage.keyFromUrl(current.avatarUrl)
+      : null;
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: { avatarUrl: url },
@@ -136,19 +148,27 @@ export class UsersService {
     dto: InviteUserDto,
   ) {
     if (!ALLOWED_INVITE_ROLES[inviterRole]?.includes(dto.role)) {
-      throw new ForbiddenException(`Your role cannot invite a ${dto.role.toLowerCase()}`);
+      throw new ForbiddenException(
+        `Your role cannot invite a ${dto.role.toLowerCase()}`,
+      );
     }
 
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (existing) {
       throw new ConflictException('An account with this email already exists');
     }
 
-    const role = await this.prisma.role.findUnique({ where: { name: dto.role } });
+    const role = await this.prisma.role.findUnique({
+      where: { name: dto.role },
+    });
     if (!role) throw new NotFoundException(`Role ${dto.role} is not seeded`);
 
     const [organization, inviter] = await Promise.all([
-      this.prisma.organization.findUniqueOrThrow({ where: { id: organizationId } }),
+      this.prisma.organization.findUniqueOrThrow({
+        where: { id: organizationId },
+      }),
       this.prisma.user.findUniqueOrThrow({ where: { id: inviterId } }),
     ]);
     const inviterName = `${inviter.firstName} ${inviter.lastName}`;
@@ -166,9 +186,19 @@ export class UsersService {
 
     const { token, tokenHash } = generateOpaqueToken();
     await this.prisma.inviteToken.create({
-      data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + INVITE_TTL_MS) },
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + INVITE_TTL_MS),
+      },
     });
-    await this.mail.sendInviteEmail(user.email, inviterName, organization.name, role.label, token);
+    await this.mail.sendInviteEmail(
+      user.email,
+      inviterName,
+      organization.name,
+      role.label,
+      token,
+    );
 
     await this.audit.record({
       organizationId,
@@ -200,22 +230,33 @@ export class UsersService {
       throw new ForbiddenException('You cannot change your own role or status');
     }
 
-    const target = await this.prisma.user.findUnique({ where: { id: targetUserId } });
+    const target = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+    });
     if (!target || target.organizationId !== organizationId) {
       throw new NotFoundException('User not found in this organization');
     }
 
     if (dto.role && !ALLOWED_INVITE_ROLES[actorRole]?.includes(dto.role)) {
-      throw new ForbiddenException(`Your role cannot grant the ${dto.role.toLowerCase()} role`);
+      throw new ForbiddenException(
+        `Your role cannot grant the ${dto.role.toLowerCase()} role`,
+      );
     }
-    const settableStatuses: UserStatus[] = [UserStatus.ACTIVE, UserStatus.SUSPENDED];
+    const settableStatuses: UserStatus[] = [
+      UserStatus.ACTIVE,
+      UserStatus.SUSPENDED,
+    ];
     if (dto.status && !settableStatuses.includes(dto.status)) {
-      throw new BadRequestException('Status can only be set to ACTIVE or SUSPENDED here');
+      throw new BadRequestException(
+        'Status can only be set to ACTIVE or SUSPENDED here',
+      );
     }
 
     const data: Prisma.UserUpdateInput = {};
     if (dto.role) {
-      const role = await this.prisma.role.findUnique({ where: { name: dto.role } });
+      const role = await this.prisma.role.findUnique({
+        where: { name: dto.role },
+      });
       if (!role) throw new NotFoundException(`Role ${dto.role} is not seeded`);
       data.role = { connect: { id: role.id } };
     }

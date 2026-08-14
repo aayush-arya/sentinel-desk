@@ -19,7 +19,11 @@ function sameSiteFor(cfg: CookieConfig): 'lax' | 'none' {
   return cfg.secure ? 'none' : 'lax';
 }
 
-export function setAuthCookies(res: Response, tokens: AuthTokenResult, cfg: CookieConfig) {
+export function setAuthCookies(
+  res: Response,
+  tokens: AuthTokenResult,
+  cfg: CookieConfig,
+) {
   const base = {
     httpOnly: true,
     secure: cfg.secure,
@@ -50,6 +54,10 @@ export function setAuthCookies(res: Response, tokens: AuthTokenResult, cfg: Cook
 export function clearAuthCookies(res: Response, cfg: CookieConfig) {
   const sameSite = sameSiteFor(cfg);
   res.clearCookie(ACCESS_COOKIE, { path: '/', secure: cfg.secure, sameSite });
-  res.clearCookie(REFRESH_COOKIE, { path: '/api/auth', secure: cfg.secure, sameSite });
+  res.clearCookie(REFRESH_COOKIE, {
+    path: '/api/auth',
+    secure: cfg.secure,
+    sameSite,
+  });
   res.clearCookie(CSRF_COOKIE, { path: '/', secure: cfg.secure, sameSite });
 }

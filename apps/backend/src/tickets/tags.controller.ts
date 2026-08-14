@@ -19,7 +19,12 @@ export class TagsController {
     return this.tagsService.findAll(user.organizationId);
   }
 
-  @Roles(RoleName.AGENT, RoleName.SENIOR_AGENT, RoleName.MANAGER, RoleName.ADMIN)
+  @Roles(
+    RoleName.AGENT,
+    RoleName.SENIOR_AGENT,
+    RoleName.MANAGER,
+    RoleName.ADMIN,
+  )
   @RequireCsrf()
   @Post()
   @ApiOperation({ summary: 'Create a new tag' })

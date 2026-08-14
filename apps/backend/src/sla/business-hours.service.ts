@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { BusinessHoursConfig } from './business-hours.util';
 import type { CreateBusinessHoursDto } from './dto/create-business-hours.dto';
@@ -45,7 +49,12 @@ export class BusinessHoursService {
           isDefault: dto.isDefault ?? false,
           slots: { create: dto.slots },
           holidays: dto.holidays?.length
-            ? { create: dto.holidays.map((h) => ({ date: new Date(h.date), name: h.name })) }
+            ? {
+                create: dto.holidays.map((h) => ({
+                  date: new Date(h.date),
+                  name: h.name,
+                })),
+              }
             : undefined,
         },
         include: SCHEDULE_INCLUDE,
@@ -53,7 +62,11 @@ export class BusinessHoursService {
     });
   }
 
-  async update(organizationId: string, id: string, dto: UpdateBusinessHoursDto) {
+  async update(
+    organizationId: string,
+    id: string,
+    dto: UpdateBusinessHoursDto,
+  ) {
     await this.findOne(organizationId, id);
 
     return this.prisma.$transaction(async (tx) => {
@@ -79,7 +92,12 @@ export class BusinessHoursService {
           isDefault: dto.isDefault,
           slots: dto.slots ? { create: dto.slots } : undefined,
           holidays: dto.holidays?.length
-            ? { create: dto.holidays.map((h) => ({ date: new Date(h.date), name: h.name })) }
+            ? {
+                create: dto.holidays.map((h) => ({
+                  date: new Date(h.date),
+                  name: h.name,
+                })),
+              }
             : undefined,
         },
         include: SCHEDULE_INCLUDE,
@@ -92,7 +110,9 @@ export class BusinessHoursService {
     try {
       await this.prisma.businessHoursSchedule.delete({ where: { id } });
     } catch {
-      throw new ConflictException('This schedule is still in use by one or more SLA policies');
+      throw new ConflictException(
+        'This schedule is still in use by one or more SLA policies',
+      );
     }
   }
 
@@ -109,7 +129,9 @@ export class BusinessHoursService {
         startMinute: s.startMinute,
         endMinute: s.endMinute,
       })),
-      holidayDates: schedule.holidays.map((h) => h.date.toISOString().slice(0, 10)),
+      holidayDates: schedule.holidays.map((h) =>
+        h.date.toISOString().slice(0, 10),
+      ),
     };
   }
 }

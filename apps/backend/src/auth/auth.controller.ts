@@ -27,7 +27,10 @@ import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RequireCsrf } from '../common/decorators/require-csrf.decorator';
-import { setAuthCookies, clearAuthCookies } from '../common/utils/auth-cookies.util';
+import {
+  setAuthCookies,
+  clearAuthCookies,
+} from '../common/utils/auth-cookies.util';
 import type { AppConfig } from '../config/configuration';
 import type { AuthenticatedUser } from './types/jwt-payload.type';
 
@@ -51,7 +54,9 @@ export class AuthController {
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('signup')
-  @ApiOperation({ summary: 'Create a new organization and its first admin user' })
+  @ApiOperation({
+    summary: 'Create a new organization and its first admin user',
+  })
   signup(@Body() dto: SignupDto, @Req() req: Request) {
     return this.authService.signup(dto, this.meta(req));
   }
@@ -59,7 +64,9 @@ export class AuthController {
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('signup-customer')
-  @ApiOperation({ summary: "Self-register as a customer on an org's support portal" })
+  @ApiOperation({
+    summary: "Self-register as a customer on an org's support portal",
+  })
   signupCustomer(@Body() dto: SignupCustomerDto, @Req() req: Request) {
     return this.authService.signupCustomer(dto, this.meta(req));
   }
@@ -67,7 +74,9 @@ export class AuthController {
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('accept-invite')
-  @ApiOperation({ summary: 'Accept a staff/customer invite and set a password' })
+  @ApiOperation({
+    summary: 'Accept a staff/customer invite and set a password',
+  })
   async acceptInvite(
     @Body() dto: AcceptInviteDto,
     @Req() req: Request,
@@ -82,7 +91,11 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('login')
   @ApiOperation({ summary: 'Authenticate with email + password' })
-  async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.login(dto, this.meta(req));
     setAuthCookies(res, result, this.cookieConfig());
     return { user: result.user, csrfToken: result.csrfToken };
@@ -91,8 +104,13 @@ export class AuthController {
   @Public()
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post('refresh')
-  @ApiOperation({ summary: 'Rotate the refresh token and mint a new access token' })
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  @ApiOperation({
+    summary: 'Rotate the refresh token and mint a new access token',
+  })
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const refreshToken = req.cookies?.sd_refresh;
     if (!refreshToken) throw new UnauthorizedException('Missing refresh token');
 
@@ -116,7 +134,10 @@ export class AuthController {
   @Post('logout-all-others')
   @ApiOperation({ summary: 'Revoke every session except the current one' })
   async logoutAllOthers(@CurrentUser() user: AuthenticatedUser) {
-    const count = await this.authService.logoutAllOtherSessions(user.id, user.sessionId);
+    const count = await this.authService.logoutAllOtherSessions(
+      user.id,
+      user.sessionId,
+    );
     return { revokedCount: count };
   }
 
@@ -162,8 +183,13 @@ export class AuthController {
   @RequireCsrf()
   @Delete('sessions/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Revoke a specific session (e.g. sign out another device)' })
-  revokeSession(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  @ApiOperation({
+    summary: 'Revoke a specific session (e.g. sign out another device)',
+  })
+  revokeSession(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     return this.authService.revokeSession(user.id, id);
   }
 }

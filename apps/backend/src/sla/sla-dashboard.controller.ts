@@ -14,14 +14,22 @@ export class SlaDashboardController {
   constructor(private readonly slaDashboardService: SlaDashboardService) {}
 
   @Get('dashboard')
-  @ApiOperation({ summary: 'SLA compliance summary: on-track/at-risk/breached counts and 30-day compliance rate' })
+  @ApiOperation({
+    summary:
+      'SLA compliance summary: on-track/at-risk/breached counts and 30-day compliance rate',
+  })
   getSummary(@CurrentUser() user: AuthenticatedUser) {
     return this.slaDashboardService.getSummary(user.organizationId);
   }
 
   @Get('violations')
-  @ApiOperation({ summary: 'Paginated list of tickets that have breached their SLA' })
-  getViolations(@CurrentUser() user: AuthenticatedUser, @Query() query: QueryViolationsDto) {
+  @ApiOperation({
+    summary: 'Paginated list of tickets that have breached their SLA',
+  })
+  getViolations(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: QueryViolationsDto,
+  ) {
     return this.slaDashboardService.getViolations(user.organizationId, query);
   }
 }

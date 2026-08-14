@@ -27,7 +27,9 @@ export class SavedFiltersService {
   }
 
   async remove(user: AuthenticatedUser, id: string): Promise<void> {
-    const existing = await this.prisma.savedFilter.findFirst({ where: { id, userId: user.id } });
+    const existing = await this.prisma.savedFilter.findFirst({
+      where: { id, userId: user.id },
+    });
     if (!existing) throw new NotFoundException('Saved filter not found');
     await this.prisma.savedFilter.delete({ where: { id } });
   }

@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Columns3, List as ListIcon, MessageSquare, Plus, Search } from 'lucide-react';
+import { Columns3, Download, List as ListIcon, MessageSquare, Plus, Search } from 'lucide-react';
 import type { TicketPriority, TicketStatus } from '@sentinel-desk/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTickets } from '@/hooks/use-tickets';
@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-badges';
 import { KanbanBoard } from '@/components/tickets/kanban-board';
 import { SavedFiltersMenu, type TicketFilterState } from '@/components/tickets/saved-filters-menu';
+import { API_BASE_URL } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 
 const STATUS_OPTIONS: { value: TicketStatus | 'ALL'; label: string }[] = [
@@ -150,6 +151,21 @@ function TicketsPageContent() {
           currentFilters={{ status: status ?? undefined, priority: priority ?? undefined, assignee, search: search || undefined }}
           onApply={applySavedFilter}
         />
+        {staff && (
+          <Button variant="outline" size="sm" className="gap-1.5" asChild>
+            <a
+              href={`${API_BASE_URL}/tickets/export/csv?${new URLSearchParams({
+                ...(status ? { status } : {}),
+                ...(priority ? { priority } : {}),
+                ...(assignee ? { assignee } : {}),
+                ...(search ? { search } : {}),
+              }).toString()}`}
+            >
+              <Download className="size-3.5" />
+              Export CSV
+            </a>
+          </Button>
+        )}
         {staff && (
           <div className="ml-auto flex items-center gap-1 rounded-lg border border-border p-0.5">
             <button

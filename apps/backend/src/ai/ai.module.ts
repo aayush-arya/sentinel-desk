@@ -13,7 +13,11 @@ import type { AppConfig } from '../config/configuration';
 import type { AiProvider } from './ai-provider.interface';
 
 @Module({
-  imports: [BullModule.registerQueue({ name: AI_ENRICHMENT_QUEUE }), RealtimeModule, TicketsModule],
+  imports: [
+    BullModule.registerQueue({ name: AI_ENRICHMENT_QUEUE }),
+    RealtimeModule,
+    TicketsModule,
+  ],
   controllers: [AiController],
   providers: [
     AiService,

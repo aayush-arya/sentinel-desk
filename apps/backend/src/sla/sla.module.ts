@@ -19,7 +19,11 @@ import { NotificationsModule } from '../notifications/notifications.module';
     RealtimeModule,
     NotificationsModule,
   ],
-  controllers: [BusinessHoursController, SlaPoliciesController, SlaDashboardController],
+  controllers: [
+    BusinessHoursController,
+    SlaPoliciesController,
+    SlaDashboardController,
+  ],
   providers: [
     BusinessHoursService,
     SlaPoliciesService,

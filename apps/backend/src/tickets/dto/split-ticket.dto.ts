@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ArrayMinSize, IsArray, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class SplitTicketDto {
   @ApiProperty({ example: 'Separate billing question' })

@@ -2,7 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
-import { NotificationType, TicketHistoryAction, TicketPriority, TicketStatus } from '@prisma/client';
+import {
+  NotificationType,
+  TicketHistoryAction,
+  TicketPriority,
+  TicketStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -33,12 +38,22 @@ export class SlaBreachCheckService {
 
   /** Pushes a live update to the ticket + org rooms and, if there's someone to tell, an in-app notification. */
   private async notifyAndBroadcast(
-    ticket: { id: string; organizationId: string; number: number; subject: string; assignee: { id: string } | null },
+    ticket: {
+      id: string;
+      organizationId: string;
+      number: number;
+      subject: string;
+      assignee: { id: string } | null;
+    },
     type: NotificationType,
     title: string,
   ) {
-    this.realtime.emitToTicket(ticket.id, 'ticket:updated', { ticketId: ticket.id });
-    this.realtime.emitToOrg(ticket.organizationId, 'ticket:updated', { ticketId: ticket.id });
+    this.realtime.emitToTicket(ticket.id, 'ticket:updated', {
+      ticketId: ticket.id,
+    });
+    this.realtime.emitToOrg(ticket.organizationId, 'ticket:updated', {
+      ticketId: ticket.id,
+    });
 
     if (ticket.assignee) {
       await this.notificationsService.create({
@@ -55,11 +70,12 @@ export class SlaBreachCheckService {
   @Cron(CronExpression.EVERY_MINUTE)
   async sweep() {
     try {
-      const [responseBreaches, resolutionBreaches, escalations] = await Promise.all([
-        this.checkResponseBreaches(),
-        this.checkResolutionBreaches(),
-        this.checkAutoEscalations(),
-      ]);
+      const [responseBreaches, resolutionBreaches, escalations] =
+        await Promise.all([
+          this.checkResponseBreaches(),
+          this.checkResolutionBreaches(),
+          this.checkAutoEscalations(),
+        ]);
       if (responseBreaches + resolutionBreaches + escalations > 0) {
         this.logger.log(
           `SLA sweep: ${responseBreaches} response breach(es), ${resolutionBreaches} resolution breach(es), ${escalations} auto-escalation(s)`,
@@ -86,9 +102,15 @@ export class SlaBreachCheckService {
 
     for (const ticket of candidates) {
       await this.prisma.$transaction([
-        this.prisma.ticket.update({ where: { id: ticket.id }, data: { responseBreached: true } }),
+        this.prisma.ticket.update({
+          where: { id: ticket.id },
+          data: { responseBreached: true },
+        }),
         this.prisma.ticketHistory.create({
-          data: { ticketId: ticket.id, action: TicketHistoryAction.RESPONSE_SLA_BREACHED },
+          data: {
+            ticketId: ticket.id,
+            action: TicketHistoryAction.RESPONSE_SLA_BREACHED,
+          },
         }),
       ]);
       await this.emailQueue.add('breach', {
@@ -124,9 +146,15 @@ export class SlaBreachCheckService {
 
     for (const ticket of candidates) {
       await this.prisma.$transaction([
-        this.prisma.ticket.update({ where: { id: ticket.id }, data: { resolutionBreached: true } }),
+        this.prisma.ticket.update({
+          where: { id: ticket.id },
+          data: { resolutionBreached: true },
+        }),
         this.prisma.ticketHistory.create({
-          data: { ticketId: ticket.id, action: TicketHistoryAction.RESOLUTION_SLA_BREACHED },
+          data: {
+            ticketId: ticket.id,
+            action: TicketHistoryAction.RESOLUTION_SLA_BREACHED,
+          },
         }),
       ]);
       await this.emailQueue.add('breach', {
@@ -171,7 +199,8 @@ export class SlaBreachCheckService {
     let escalatedCount = 0;
     for (const ticket of candidates) {
       if (!ticket.resolutionDueAt || !ticket.slaPolicy) continue;
-      const totalWindowMs = ticket.resolutionDueAt.getTime() - ticket.createdAt.getTime();
+      const totalWindowMs =
+        ticket.resolutionDueAt.getTime() - ticket.createdAt.getTime();
       if (totalWindowMs <= 0) continue;
       const elapsedMs = now.getTime() - ticket.createdAt.getTime();
       const elapsedPercent = (elapsedMs / totalWindowMs) * 100;
@@ -187,7 +216,11 @@ export class SlaBreachCheckService {
           data: {
             ticketId: ticket.id,
             action: TicketHistoryAction.AUTO_ESCALATED,
-            metadata: { fromPriority: ticket.priority, toPriority: nextPriority, elapsedPercent: Math.round(elapsedPercent) },
+            metadata: {
+              fromPriority: ticket.priority,
+              toPriority: nextPriority,
+              elapsedPercent: Math.round(elapsedPercent),
+            },
           },
         }),
       ]);

@@ -3,7 +3,10 @@ import { CommentVisibility } from '@prisma/client';
 import { IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateCommentDto {
-  @ApiProperty({ example: 'Thanks for reaching out — could you share a screenshot of the error?' })
+  @ApiProperty({
+    example:
+      'Thanks for reaching out — could you share a screenshot of the error?',
+  })
   @IsString()
   @MinLength(1)
   body!: string;
@@ -11,7 +14,8 @@ export class CreateCommentDto {
   @ApiPropertyOptional({
     enum: CommentVisibility,
     default: CommentVisibility.PUBLIC,
-    description: 'Staff only — INTERNAL notes are never visible to the customer',
+    description:
+      'Staff only — INTERNAL notes are never visible to the customer',
   })
   @IsOptional()
   @IsEnum(CommentVisibility)

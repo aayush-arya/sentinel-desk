@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
 import { BusinessHoursService } from './business-hours.service';
@@ -32,7 +40,10 @@ export class BusinessHoursController {
   @RequireCsrf()
   @Post()
   @ApiOperation({ summary: 'Create a business hours schedule' })
-  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateBusinessHoursDto) {
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateBusinessHoursDto,
+  ) {
     return this.businessHoursService.create(user.organizationId, dto);
   }
 

@@ -28,16 +28,23 @@ export class MacrosService {
   }
 
   async update(user: AuthenticatedUser, id: string, dto: UpdateMacroDto) {
-    const existing = await this.prisma.macro.findFirst({ where: { id, organizationId: user.organizationId } });
+    const existing = await this.prisma.macro.findFirst({
+      where: { id, organizationId: user.organizationId },
+    });
     if (!existing) throw new NotFoundException('Macro not found');
     return this.prisma.macro.update({
       where: { id },
-      data: { title: dto.title, body: dto.body !== undefined ? sanitizeRichText(dto.body) : undefined },
+      data: {
+        title: dto.title,
+        body: dto.body !== undefined ? sanitizeRichText(dto.body) : undefined,
+      },
     });
   }
 
   async remove(user: AuthenticatedUser, id: string): Promise<void> {
-    const existing = await this.prisma.macro.findFirst({ where: { id, organizationId: user.organizationId } });
+    const existing = await this.prisma.macro.findFirst({
+      where: { id, organizationId: user.organizationId },
+    });
     if (!existing) throw new NotFoundException('Macro not found');
     await this.prisma.macro.delete({ where: { id } });
   }

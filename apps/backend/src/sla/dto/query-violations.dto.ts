@@ -18,7 +18,10 @@ export class QueryViolationsDto {
   @Max(100)
   pageSize?: number = 25;
 
-  @ApiPropertyOptional({ enum: ['response', 'resolution', 'both'], default: 'both' })
+  @ApiPropertyOptional({
+    enum: ['response', 'resolution', 'both'],
+    default: 'both',
+  })
   @IsOptional()
   @IsIn(['response', 'resolution', 'both'])
   kind?: 'response' | 'resolution' | 'both' = 'both';

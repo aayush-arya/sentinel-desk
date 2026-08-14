@@ -39,7 +39,10 @@ export class CreateSlaPolicyDto {
   @Max(100)
   autoEscalateAtPercent?: number;
 
-  @ApiProperty({ type: [SlaPolicyRuleDto], description: 'One rule per priority level' })
+  @ApiProperty({
+    type: [SlaPolicyRuleDto],
+    description: 'One rule per priority level',
+  })
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })

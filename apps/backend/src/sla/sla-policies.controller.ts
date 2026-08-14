@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
 import { SlaPoliciesService } from './sla-policies.service';
@@ -32,14 +40,21 @@ export class SlaPoliciesController {
   @RequireCsrf()
   @Post()
   @ApiOperation({ summary: 'Create an SLA policy' })
-  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateSlaPolicyDto) {
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateSlaPolicyDto,
+  ) {
     return this.slaPoliciesService.create(user.organizationId, dto);
   }
 
   @RequireCsrf()
   @Patch(':id')
   @ApiOperation({ summary: 'Update an SLA policy' })
-  update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: UpdateSlaPolicyDto) {
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateSlaPolicyDto,
+  ) {
     return this.slaPoliciesService.update(user.organizationId, id, dto);
   }
 

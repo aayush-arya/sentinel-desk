@@ -26,7 +26,11 @@ const MAX_DAYS_SCANNED = 3660; // ~10 years — a sane upper bound, not a real l
  * Falls back to plain wall-clock addition if the schedule has no slots configured
  * at all (better to compute something reasonable than throw on a default/empty org).
  */
-export function addBusinessMinutes(start: Date, minutesToAdd: number, config: BusinessHoursConfig): Date {
+export function addBusinessMinutes(
+  start: Date,
+  minutesToAdd: number,
+  config: BusinessHoursConfig,
+): Date {
   if (config.slots.length === 0) {
     return new Date(start.getTime() + minutesToAdd * 60_000);
   }
@@ -38,7 +42,9 @@ export function addBusinessMinutes(start: Date, minutesToAdd: number, config: Bu
 
   while (remaining > 0) {
     if (daysScanned++ > MAX_DAYS_SCANNED) {
-      throw new Error('addBusinessMinutes: exceeded max scan window — check business hours configuration');
+      throw new Error(
+        'addBusinessMinutes: exceeded max scan window — check business hours configuration',
+      );
     }
 
     const dayKey = cursor.toFormat('yyyy-MM-dd');
@@ -46,7 +52,9 @@ export function addBusinessMinutes(start: Date, minutesToAdd: number, config: Bu
     const todaysWeekday = cursor.weekday % 7;
     const daySlots = holidaySet.has(dayKey)
       ? []
-      : config.slots.filter((s) => s.dayOfWeek === todaysWeekday).sort((a, b) => a.startMinute - b.startMinute);
+      : config.slots
+          .filter((s) => s.dayOfWeek === todaysWeekday)
+          .sort((a, b) => a.startMinute - b.startMinute);
 
     const minuteOfDay = cursor.hour * 60 + cursor.minute + cursor.second / 60;
 

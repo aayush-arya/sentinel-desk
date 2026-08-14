@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Activity, BarChart3, Building2, Database, ScrollText, Server, Settings, TicketIcon, Users } from 'lucide-react';
+import { Activity, BarChart3, Building2, Database, KeyRound, ScrollText, Server, Settings, TicketIcon, Users, Webhook } from 'lucide-react';
 import type { RoleName, UserProfile } from '@sentinel-desk/types';
 import { ROLE_LABELS } from '@sentinel-desk/types';
 import { useOrgMembers } from '@/hooks/use-team';
@@ -160,6 +160,18 @@ export function AdminDashboard({ user }: { user: UserProfile }) {
             className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50"
           >
             <ScrollText className="size-3.5" /> Audit log
+          </Link>
+          <Link
+            href="/dashboard/webhooks"
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50"
+          >
+            <Webhook className="size-3.5" /> Webhooks
+          </Link>
+          <Link
+            href="/dashboard/api-keys"
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50"
+          >
+            <KeyRound className="size-3.5" /> API keys
           </Link>
         </CardContent>
       </Card>

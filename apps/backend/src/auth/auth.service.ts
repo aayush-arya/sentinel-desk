@@ -30,7 +30,10 @@ import type { ForgotPasswordDto } from './dto/forgot-password.dto';
 import type { ResetPasswordDto } from './dto/reset-password.dto';
 import type { ResendVerificationDto } from './dto/resend-verification.dto';
 import type { AcceptInviteDto } from './dto/accept-invite.dto';
-import type { JwtAccessPayload, JwtRefreshPayload } from './types/jwt-payload.type';
+import type {
+  JwtAccessPayload,
+  JwtRefreshPayload,
+} from './types/jwt-payload.type';
 
 export interface RequestMeta {
   ip?: string;
@@ -78,22 +81,31 @@ export class AuthService {
     private readonly audit: AuditService,
   ) {}
 
-  async signup(dto: SignupDto, meta: RequestMeta): Promise<{ message: string }> {
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+  async signup(
+    dto: SignupDto,
+    meta: RequestMeta,
+  ): Promise<{ message: string }> {
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (existing) {
       throw new ConflictException('An account with this email already exists');
     }
 
     const slugBase = slugify(dto.organizationName) || 'workspace';
     let slug = slugBase;
-    // eslint-disable-next-line no-constant-condition
+
     while (await this.prisma.organization.findUnique({ where: { slug } })) {
       slug = `${slugBase}-${randomSuffix()}`;
     }
 
-    const adminRole = await this.prisma.role.findUnique({ where: { name: RoleName.ADMIN } });
+    const adminRole = await this.prisma.role.findUnique({
+      where: { name: RoleName.ADMIN },
+    });
     if (!adminRole) {
-      throw new Error('ADMIN role is not seeded — run `pnpm seed` before starting the app');
+      throw new Error(
+        'ADMIN role is not seeded — run `pnpm seed` before starting the app',
+      );
     }
 
     const passwordHash = await hashPassword(dto.password);
@@ -125,17 +137,24 @@ export class AuthService {
       ipAddress: meta.ip,
     });
 
-    return { message: 'Account created. Check your email to verify your address.' };
+    return {
+      message: 'Account created. Check your email to verify your address.',
+    };
   }
 
   /** Self-service registration for end customers on a specific org's support portal. */
-  async signupCustomer(dto: SignupCustomerDto, meta: RequestMeta): Promise<{ message: string }> {
+  async signupCustomer(
+    dto: SignupCustomerDto,
+    meta: RequestMeta,
+  ): Promise<{ message: string }> {
     const organization = await this.prisma.organization.findUnique({
       where: { slug: dto.organizationSlug },
     });
     if (!organization) throw new NotFoundException('Unknown support portal');
 
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (existing) {
       throw new ConflictException('An account with this email already exists');
     }
@@ -144,7 +163,9 @@ export class AuthService {
       where: { name: RoleName.CUSTOMER },
     });
     if (!customerRole) {
-      throw new Error('CUSTOMER role is not seeded — run `pnpm seed` before starting the app');
+      throw new Error(
+        'CUSTOMER role is not seeded — run `pnpm seed` before starting the app',
+      );
     }
 
     const passwordHash = await hashPassword(dto.password);
@@ -170,13 +191,20 @@ export class AuthService {
       ipAddress: meta.ip,
     });
 
-    return { message: 'Account created. Check your email to verify your address.' };
+    return {
+      message: 'Account created. Check your email to verify your address.',
+    };
   }
 
   /** Completes a staff/customer invite by setting the initial password and activating the account. */
-  async acceptInvite(dto: AcceptInviteDto, meta: RequestMeta): Promise<AuthTokenResult> {
+  async acceptInvite(
+    dto: AcceptInviteDto,
+    meta: RequestMeta,
+  ): Promise<AuthTokenResult> {
     const tokenHash = hashToken(dto.token);
-    const record = await this.prisma.inviteToken.findUnique({ where: { tokenHash } });
+    const record = await this.prisma.inviteToken.findUnique({
+      where: { tokenHash },
+    });
     if (!record || record.consumedAt || record.expiresAt < new Date()) {
       throw new UnauthorizedException('Invite link is invalid or has expired');
     }
@@ -214,19 +242,27 @@ export class AuthService {
 
     // Constant-shape error for both "no such user" and "wrong password" to avoid
     // leaking which emails are registered.
-    const invalidCredentials = () => new UnauthorizedException('Invalid email or password');
+    const invalidCredentials = () =>
+      new UnauthorizedException('Invalid email or password');
 
     if (!user || !user.passwordHash) throw invalidCredentials();
     const passwordOk = await comparePassword(dto.password, user.passwordHash);
     if (!passwordOk) throw invalidCredentials();
 
     if (user.status === UserStatus.PENDING_VERIFICATION) {
-      throw new ForbiddenException('Please verify your email before logging in');
+      throw new ForbiddenException(
+        'Please verify your email before logging in',
+      );
     }
     if (user.status === UserStatus.INVITED) {
-      throw new ForbiddenException('Please accept your invite email before logging in');
+      throw new ForbiddenException(
+        'Please accept your invite email before logging in',
+      );
     }
-    if (user.status === UserStatus.SUSPENDED || user.status === UserStatus.DEACTIVATED) {
+    if (
+      user.status === UserStatus.SUSPENDED ||
+      user.status === UserStatus.DEACTIVATED
+    ) {
       throw new ForbiddenException('This account is no longer active');
     }
 
@@ -247,7 +283,10 @@ export class AuthService {
     return result;
   }
 
-  async refresh(refreshToken: string, meta: RequestMeta): Promise<AuthTokenResult> {
+  async refresh(
+    refreshToken: string,
+    meta: RequestMeta,
+  ): Promise<AuthTokenResult> {
     const jwtConfig = this.config.get('jwt', { infer: true });
     let payload: JwtRefreshPayload;
     try {
@@ -258,7 +297,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    const session = await this.prisma.session.findUnique({ where: { id: payload.sessionId } });
+    const session = await this.prisma.session.findUnique({
+      where: { id: payload.sessionId },
+    });
     if (!session || session.revokedAt || session.expiresAt < new Date()) {
       throw new UnauthorizedException('Session is no longer valid');
     }
@@ -272,7 +313,9 @@ export class AuthService {
         where: { id: session.id },
         data: { revokedAt: new Date() },
       });
-      this.logger.warn(`Refresh token reuse detected for session ${session.id}`);
+      this.logger.warn(
+        `Refresh token reuse detected for session ${session.id}`,
+      );
       throw new UnauthorizedException('Refresh token has already been used');
     }
 
@@ -280,11 +323,20 @@ export class AuthService {
       where: { id: session.userId },
       include: { organization: true, role: true },
     });
-    if (!user || user.status === UserStatus.SUSPENDED || user.status === UserStatus.DEACTIVATED) {
+    if (
+      !user ||
+      user.status === UserStatus.SUSPENDED ||
+      user.status === UserStatus.DEACTIVATED
+    ) {
       throw new UnauthorizedException('Account is no longer active');
     }
 
-    const rotated = await this.rotateSession(session.id, user, meta, session.isRememberMe);
+    const rotated = await this.rotateSession(
+      session.id,
+      user,
+      meta,
+      session.isRememberMe,
+    );
     return rotated;
   }
 
@@ -295,7 +347,10 @@ export class AuthService {
     });
   }
 
-  async logoutAllOtherSessions(userId: string, currentSessionId: string): Promise<number> {
+  async logoutAllOtherSessions(
+    userId: string,
+    currentSessionId: string,
+  ): Promise<number> {
     const result = await this.prisma.session.updateMany({
       where: { userId, id: { not: currentSessionId }, revokedAt: null },
       data: { revokedAt: new Date() },
@@ -320,7 +375,9 @@ export class AuthService {
   }
 
   async revokeSession(userId: string, sessionId: string): Promise<void> {
-    const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+    });
     if (!session || session.userId !== userId) {
       throw new ForbiddenException('You can only revoke your own sessions');
     }
@@ -332,9 +389,13 @@ export class AuthService {
 
   async verifyEmail(token: string): Promise<void> {
     const tokenHash = hashToken(token);
-    const record = await this.prisma.emailVerificationToken.findUnique({ where: { tokenHash } });
+    const record = await this.prisma.emailVerificationToken.findUnique({
+      where: { tokenHash },
+    });
     if (!record || record.consumedAt || record.expiresAt < new Date()) {
-      throw new UnauthorizedException('Verification link is invalid or has expired');
+      throw new UnauthorizedException(
+        'Verification link is invalid or has expired',
+      );
     }
 
     await this.prisma.$transaction([
@@ -349,8 +410,11 @@ export class AuthService {
     ]);
 
     await this.audit.record({
-      organizationId: (await this.prisma.user.findUniqueOrThrow({ where: { id: record.userId } }))
-        .organizationId,
+      organizationId: (
+        await this.prisma.user.findUniqueOrThrow({
+          where: { id: record.userId },
+        })
+      ).organizationId,
       actorUserId: record.userId,
       action: 'auth.email_verified',
       entityType: 'User',
@@ -358,23 +422,32 @@ export class AuthService {
     });
   }
 
-  async resendVerification(dto: ResendVerificationDto): Promise<{ message: string }> {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+  async resendVerification(
+    dto: ResendVerificationDto,
+  ): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     // Always return the same message whether or not the account exists, to avoid
     // leaking registered emails to an unauthenticated caller.
     const genericResponse = {
-      message: 'If an account with that email exists, a verification link has been sent.',
+      message:
+        'If an account with that email exists, a verification link has been sent.',
     };
-    if (!user || user.status !== UserStatus.PENDING_VERIFICATION) return genericResponse;
+    if (!user || user.status !== UserStatus.PENDING_VERIFICATION)
+      return genericResponse;
 
     await this.issueEmailVerification(user.id, user.email, user.firstName);
     return genericResponse;
   }
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     const genericResponse = {
-      message: 'If an account with that email exists, a password reset link has been sent.',
+      message:
+        'If an account with that email exists, a password reset link has been sent.',
     };
     if (!user) return genericResponse;
 
@@ -392,7 +465,9 @@ export class AuthService {
 
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
     const tokenHash = hashToken(dto.token);
-    const record = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+    const record = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+    });
     if (!record || record.consumedAt || record.expiresAt < new Date()) {
       throw new UnauthorizedException('Reset link is invalid or has expired');
     }
@@ -403,7 +478,10 @@ export class AuthService {
         where: { id: record.id },
         data: { consumedAt: new Date() },
       }),
-      this.prisma.user.update({ where: { id: record.userId }, data: { passwordHash } }),
+      this.prisma.user.update({
+        where: { id: record.userId },
+        data: { passwordHash },
+      }),
       // Resetting a password invalidates every existing session — the whole point
       // of a reset is usually "I think someone else has access to my account".
       this.prisma.session.updateMany({
@@ -413,8 +491,11 @@ export class AuthService {
     ]);
 
     await this.audit.record({
-      organizationId: (await this.prisma.user.findUniqueOrThrow({ where: { id: record.userId } }))
-        .organizationId,
+      organizationId: (
+        await this.prisma.user.findUniqueOrThrow({
+          where: { id: record.userId },
+        })
+      ).organizationId,
       actorUserId: record.userId,
       action: 'auth.password_reset',
       entityType: 'User',
@@ -424,10 +505,18 @@ export class AuthService {
 
   // ── internals ─────────────────────────────────────────────────────
 
-  private async issueEmailVerification(userId: string, email: string, firstName: string) {
+  private async issueEmailVerification(
+    userId: string,
+    email: string,
+    firstName: string,
+  ) {
     const { token, tokenHash } = generateOpaqueToken();
     await this.prisma.emailVerificationToken.create({
-      data: { userId, tokenHash, expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS) },
+      data: {
+        userId,
+        tokenHash,
+        expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
+      },
     });
     await this.mail.sendVerificationEmail(email, firstName, token);
   }
@@ -447,7 +536,12 @@ export class AuthService {
    * through every call site.
    */
   private async signTokenPair(
-    user: { id: string; organizationId: string; roleId: string; role: { name: RoleName } },
+    user: {
+      id: string;
+      organizationId: string;
+      roleId: string;
+      role: { name: RoleName };
+    },
     sessionId: string,
     refreshTtl: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
@@ -474,7 +568,17 @@ export class AuthService {
   }
 
   private async issueSession(
-    user: { id: string; organizationId: string; roleId: string; role: { name: RoleName }; organization: SafeUser['organization']; email: string; firstName: string; lastName: string; avatarUrl: string | null },
+    user: {
+      id: string;
+      organizationId: string;
+      roleId: string;
+      role: { name: RoleName };
+      organization: SafeUser['organization'];
+      email: string;
+      firstName: string;
+      lastName: string;
+      avatarUrl: string | null;
+    },
     meta: RequestMeta,
     rememberMe: boolean,
   ): Promise<AuthTokenResult> {
@@ -500,7 +604,11 @@ export class AuthService {
       },
     });
 
-    const { accessToken, refreshToken } = await this.signTokenPair(user, session.id, refreshTtl);
+    const { accessToken, refreshToken } = await this.signTokenPair(
+      user,
+      session.id,
+      refreshTtl,
+    );
 
     await this.prisma.session.update({
       where: { id: session.id },
@@ -519,7 +627,17 @@ export class AuthService {
 
   private async rotateSession(
     sessionId: string,
-    user: { id: string; organizationId: string; roleId: string; role: { name: RoleName }; organization: SafeUser['organization']; email: string; firstName: string; lastName: string; avatarUrl: string | null },
+    user: {
+      id: string;
+      organizationId: string;
+      roleId: string;
+      role: { name: RoleName };
+      organization: SafeUser['organization'];
+      email: string;
+      firstName: string;
+      lastName: string;
+      avatarUrl: string | null;
+    },
     meta: RequestMeta,
     rememberMe: boolean,
   ): Promise<AuthTokenResult> {
@@ -530,7 +648,11 @@ export class AuthService {
     const now = new Date();
     const refreshTokenExpiresAt = addDuration(now, refreshTtl);
 
-    const { accessToken, refreshToken } = await this.signTokenPair(user, sessionId, refreshTtl);
+    const { accessToken, refreshToken } = await this.signTokenPair(
+      user,
+      sessionId,
+      refreshTtl,
+    );
 
     await this.prisma.session.update({
       where: { id: sessionId },

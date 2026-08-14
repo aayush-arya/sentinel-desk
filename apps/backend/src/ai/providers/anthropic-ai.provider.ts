@@ -27,7 +27,10 @@ function stripHtml(html: string): string {
 function renderPublicTranscript(ticket: TicketContext): string {
   const lines = ticket.comments
     .filter((c) => c.visibility === 'PUBLIC')
-    .map((c) => `${c.authorIsStaff ? 'Agent' : 'Customer'} (${c.authorName}): ${stripHtml(c.body)}`);
+    .map(
+      (c) =>
+        `${c.authorIsStaff ? 'Agent' : 'Customer'} (${c.authorName}): ${stripHtml(c.body)}`,
+    );
   return `Subject: ${ticket.subject}\n\n${lines.join('\n\n')}`;
 }
 
@@ -44,7 +47,11 @@ export class AnthropicAiProvider implements AiProvider {
     this.model = aiConfig.anthropicModel;
   }
 
-  private async completeText(system: string, userContent: string, maxTokens = 512): Promise<string> {
+  private async completeText(
+    system: string,
+    userContent: string,
+    maxTokens = 512,
+  ): Promise<string> {
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: maxTokens,
@@ -112,7 +119,10 @@ export class AnthropicAiProvider implements AiProvider {
         input_schema: {
           type: 'object',
           properties: {
-            sentiment: { type: 'string', enum: Object.values(CommentSentiment) },
+            sentiment: {
+              type: 'string',
+              enum: Object.values(CommentSentiment),
+            },
           },
           required: ['sentiment'],
         },
@@ -122,7 +132,10 @@ export class AnthropicAiProvider implements AiProvider {
     return result.sentiment;
   }
 
-  async suggestPriority(input: { subject: string; body: string }): Promise<PrioritySuggestion> {
+  async suggestPriority(input: {
+    subject: string;
+    body: string;
+  }): Promise<PrioritySuggestion> {
     return this.completeTool<PrioritySuggestion>(
       'Suggest a support ticket priority based on urgency and business impact, not just tone.',
       `Subject: ${input.subject}\n\n${stripHtml(input.body)}`,
@@ -142,7 +155,11 @@ export class AnthropicAiProvider implements AiProvider {
     );
   }
 
-  async suggestTags(input: { subject: string; body: string; existingTagNames: string[] }): Promise<string[]> {
+  async suggestTags(input: {
+    subject: string;
+    body: string;
+    existingTagNames: string[];
+  }): Promise<string[]> {
     const result = await this.completeTool<{ tags: string[] }>(
       'Suggest up to 3 short, lowercase-kebab-case tags categorizing this ticket. Prefer ' +
         'reusing one of the existing tags below when it genuinely fits over inventing a new one.',
@@ -171,10 +188,15 @@ export class AnthropicAiProvider implements AiProvider {
     if (candidates.length === 0) return [];
 
     const candidateList = candidates
-      .map((c) => `id=${c.id} #${c.number}: ${c.subject}\n${stripHtml(c.firstCommentBody).slice(0, 300)}`)
+      .map(
+        (c) =>
+          `id=${c.id} #${c.number}: ${c.subject}\n${stripHtml(c.firstCommentBody).slice(0, 300)}`,
+      )
       .join('\n\n');
 
-    const result = await this.completeTool<{ duplicates: DuplicateCandidate[] }>(
+    const result = await this.completeTool<{
+      duplicates: DuplicateCandidate[];
+    }>(
       'Compare the new ticket against the candidate list and flag any that describe the ' +
         'same underlying issue. Only include genuine likely duplicates (confidence >= 0.5) — ' +
         'an empty list is the right answer when nothing matches. Use the exact id given.',
@@ -215,10 +237,14 @@ export class AnthropicAiProvider implements AiProvider {
     if (candidates.length === 0) return [];
 
     const candidateList = candidates
-      .map((c) => `id=${c.id}: ${c.title}\n${stripHtml(c.excerpt).slice(0, 200)}`)
+      .map(
+        (c) => `id=${c.id}: ${c.title}\n${stripHtml(c.excerpt).slice(0, 200)}`,
+      )
       .join('\n\n');
 
-    const result = await this.completeTool<{ recommendations: KnowledgeArticleRecommendation[] }>(
+    const result = await this.completeTool<{
+      recommendations: KnowledgeArticleRecommendation[];
+    }>(
       'Given this support ticket, recommend which knowledge base articles (if any) would help ' +
         'the agent resolve it or could be shared with the customer. Only include genuinely ' +
         'relevant articles (confidence >= 0.4) — an empty list is the right answer when nothing ' +
@@ -226,7 +252,8 @@ export class AnthropicAiProvider implements AiProvider {
       `Ticket:\nSubject: ${target.subject}\n${stripHtml(target.body)}\n\nCandidate articles:\n${candidateList}`,
       {
         name: 'recommend_articles',
-        description: 'Record relevant knowledge base articles from the candidate list.',
+        description:
+          'Record relevant knowledge base articles from the candidate list.',
         input_schema: {
           type: 'object',
           properties: {

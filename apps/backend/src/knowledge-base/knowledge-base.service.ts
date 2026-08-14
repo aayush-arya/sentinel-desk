@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { KnowledgeArticleStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { sanitizeRichText } from '../common/utils/sanitize-html.util';
@@ -9,7 +13,9 @@ import type { UpdateArticleDto } from './dto/update-article.dto';
 import type { QueryArticlesDto } from './dto/query-articles.dto';
 
 const ARTICLE_INCLUDE = {
-  author: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+  author: {
+    select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+  },
 } satisfies Prisma.KnowledgeArticleInclude;
 
 function slugify(title: string): string {
@@ -26,7 +32,11 @@ function slugify(title: string): string {
 export class KnowledgeBaseService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async uniqueSlug(organizationId: string, title: string, excludeId?: string): Promise<string> {
+  private async uniqueSlug(
+    organizationId: string,
+    title: string,
+    excludeId?: string,
+  ): Promise<string> {
     const base = slugify(title);
     let candidate = base;
     let suffix = 1;
@@ -34,7 +44,11 @@ export class KnowledgeBaseService {
     // and plenty fast at this scale, unlike Ticket numbers which need a hot-path counter.
     while (
       await this.prisma.knowledgeArticle.findFirst({
-        where: { organizationId, slug: candidate, id: excludeId ? { not: excludeId } : undefined },
+        where: {
+          organizationId,
+          slug: candidate,
+          id: excludeId ? { not: excludeId } : undefined,
+        },
         select: { id: true },
       })
     ) {
@@ -46,7 +60,9 @@ export class KnowledgeBaseService {
 
   async findAll(user: AuthenticatedUser, query: QueryArticlesDto) {
     const staff = isStaff(user);
-    const where: Prisma.KnowledgeArticleWhereInput = { organizationId: user.organizationId };
+    const where: Prisma.KnowledgeArticleWhereInput = {
+      organizationId: user.organizationId,
+    };
 
     // Customers can never request anything but PUBLISHED, no matter what `status` says.
     if (!staff) where.status = KnowledgeArticleStatus.PUBLISHED;
@@ -73,7 +89,15 @@ export class KnowledgeBaseService {
       this.prisma.knowledgeArticle.count({ where }),
     ]);
 
-    return { items, meta: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) } };
+    return {
+      items,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      },
+    };
   }
 
   async findOne(user: AuthenticatedUser, id: string) {
@@ -89,13 +113,18 @@ export class KnowledgeBaseService {
   }
 
   async recordView(id: string): Promise<void> {
-    await this.prisma.knowledgeArticle.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {
-      // Best-effort — a view count is a nice-to-have, not worth surfacing an error for.
-    });
+    await this.prisma.knowledgeArticle
+      .update({ where: { id }, data: { viewCount: { increment: 1 } } })
+      .catch(() => {
+        // Best-effort — a view count is a nice-to-have, not worth surfacing an error for.
+      });
   }
 
   async create(user: AuthenticatedUser, dto: CreateArticleDto) {
-    if (!isStaff(user)) throw new ForbiddenException('Only staff can create knowledge base articles');
+    if (!isStaff(user))
+      throw new ForbiddenException(
+        'Only staff can create knowledge base articles',
+      );
     const slug = await this.uniqueSlug(user.organizationId, dto.title);
     return this.prisma.knowledgeArticle.create({
       data: {
@@ -111,13 +140,19 @@ export class KnowledgeBaseService {
   }
 
   async update(user: AuthenticatedUser, id: string, dto: UpdateArticleDto) {
-    if (!isStaff(user)) throw new ForbiddenException('Only staff can edit knowledge base articles');
+    if (!isStaff(user))
+      throw new ForbiddenException(
+        'Only staff can edit knowledge base articles',
+      );
     const existing = await this.prisma.knowledgeArticle.findFirst({
       where: { id, organizationId: user.organizationId },
     });
     if (!existing) throw new NotFoundException('Article not found');
 
-    const slug = dto.title && dto.title !== existing.title ? await this.uniqueSlug(user.organizationId, dto.title, id) : undefined;
+    const slug =
+      dto.title && dto.title !== existing.title
+        ? await this.uniqueSlug(user.organizationId, dto.title, id)
+        : undefined;
 
     return this.prisma.knowledgeArticle.update({
       where: { id },
@@ -132,7 +167,10 @@ export class KnowledgeBaseService {
   }
 
   async remove(user: AuthenticatedUser, id: string): Promise<void> {
-    if (!isStaff(user)) throw new ForbiddenException('Only staff can delete knowledge base articles');
+    if (!isStaff(user))
+      throw new ForbiddenException(
+        'Only staff can delete knowledge base articles',
+      );
     const existing = await this.prisma.knowledgeArticle.findFirst({
       where: { id, organizationId: user.organizationId },
     });

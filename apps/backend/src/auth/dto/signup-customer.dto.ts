@@ -1,12 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import {
   STRONG_PASSWORD_MESSAGE,
   STRONG_PASSWORD_REGEX,
 } from '../../common/utils/password.validator';
 
 export class SignupCustomerDto {
-  @ApiProperty({ example: 'acme', description: "The support organization's slug" })
+  @ApiProperty({
+    example: 'acme',
+    description: "The support organization's slug",
+  })
   @IsString()
   organizationSlug!: string;
 

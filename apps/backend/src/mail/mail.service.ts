@@ -38,12 +38,20 @@ export class MailService {
 
   sendVerificationEmail(to: string, firstName: string, token: string) {
     const url = `${this.frontendUrl}/verify-email?token=${token}`;
-    return this.send(to, 'Verify your email — SentinelDesk', verifyEmailTemplate(firstName, url));
+    return this.send(
+      to,
+      'Verify your email — SentinelDesk',
+      verifyEmailTemplate(firstName, url),
+    );
   }
 
   sendPasswordResetEmail(to: string, firstName: string, token: string) {
     const url = `${this.frontendUrl}/reset-password?token=${token}`;
-    return this.send(to, 'Reset your password — SentinelDesk', resetPasswordTemplate(firstName, url));
+    return this.send(
+      to,
+      'Reset your password — SentinelDesk',
+      resetPasswordTemplate(firstName, url),
+    );
   }
 
   sendInviteEmail(
@@ -70,7 +78,8 @@ export class MailService {
     kind: 'response' | 'resolution' | 'escalation',
   ) {
     const url = `${this.frontendUrl}/dashboard/tickets/${ticketId}`;
-    const label = kind === 'escalation' ? 'auto-escalated' : `${kind} SLA breached`;
+    const label =
+      kind === 'escalation' ? 'auto-escalated' : `${kind} SLA breached`;
     return this.send(
       to,
       `SentinelDesk: Ticket #${ticketNumber} ${label}`,

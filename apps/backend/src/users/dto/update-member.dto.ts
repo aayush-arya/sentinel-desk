@@ -8,7 +8,10 @@ export class UpdateMemberDto {
   @IsEnum(RoleName)
   role?: RoleName;
 
-  @ApiPropertyOptional({ enum: UserStatus, description: 'Only ACTIVE and SUSPENDED are settable here' })
+  @ApiPropertyOptional({
+    enum: UserStatus,
+    description: 'Only ACTIVE and SUSPENDED are settable here',
+  })
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;

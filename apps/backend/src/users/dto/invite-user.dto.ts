@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
-import { IsEmail, IsEnum, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class InviteUserDto {
   @ApiProperty({ example: 'sam@acme.com' })

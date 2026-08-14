@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
@@ -28,7 +29,12 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { RequireCsrf } from '../common/decorators/require-csrf.decorator';
 import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 
-const STAFF_ROLES = [RoleName.AGENT, RoleName.SENIOR_AGENT, RoleName.MANAGER, RoleName.ADMIN];
+const STAFF_ROLES = [
+  RoleName.AGENT,
+  RoleName.SENIOR_AGENT,
+  RoleName.MANAGER,
+  RoleName.ADMIN,
+];
 const ATTACHMENT_LIMITS = { fileSize: 25 * 1024 * 1024 };
 
 @ApiTags('tickets')
@@ -39,7 +45,10 @@ export class TicketsController {
   @RequireCsrf()
   @Post()
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Create a ticket (customers file their own; staff may file on behalf of one)' })
+  @ApiOperation({
+    summary:
+      'Create a ticket (customers file their own; staff may file on behalf of one)',
+  })
   @UseInterceptors(FilesInterceptor('files', 10, { limits: ATTACHMENT_LIMITS }))
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -51,8 +60,26 @@ export class TicketsController {
 
   @Get()
   @ApiOperation({ summary: 'List tickets (customers see only their own)' })
-  findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: QueryTicketsDto) {
+  findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: QueryTicketsDto,
+  ) {
     return this.ticketsService.findAll(user, query);
+  }
+
+  // Must be registered before ':id' - otherwise Nest would match "export" as an id.
+  @Get('export/csv')
+  @Header('Content-Type', 'text/csv')
+  @Header('Content-Disposition', 'attachment; filename="tickets.csv"')
+  @ApiOperation({
+    summary:
+      'Export the current filtered ticket list as CSV (capped at 5000 rows)',
+  })
+  exportCsv(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: QueryTicketsDto,
+  ) {
+    return this.ticketsService.exportCsv(user, query);
   }
 
   @Get(':id')
@@ -63,7 +90,10 @@ export class TicketsController {
 
   @RequireCsrf()
   @Patch(':id')
-  @ApiOperation({ summary: 'Update subject (anyone with access) or priority/status (staff only)' })
+  @ApiOperation({
+    summary:
+      'Update subject (anyone with access) or priority/status (staff only)',
+  })
   update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
@@ -81,15 +111,23 @@ export class TicketsController {
 
   @RequireCsrf()
   @Post(':id/csat')
-  @ApiOperation({ summary: 'Rate a resolved/closed ticket 1-5 (requester only, once)' })
-  rateCsat(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: RateCsatDto) {
+  @ApiOperation({
+    summary: 'Rate a resolved/closed ticket 1-5 (requester only, once)',
+  })
+  rateCsat(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: RateCsatDto,
+  ) {
     return this.ticketsService.rateCsat(user, id, dto);
   }
 
   @RequireCsrf()
   @Post(':id/comments')
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Reply to a ticket (staff may add an internal-only note)' })
+  @ApiOperation({
+    summary: 'Reply to a ticket (staff may add an internal-only note)',
+  })
   @UseInterceptors(FilesInterceptor('files', 10, { limits: ATTACHMENT_LIMITS }))
   addComment(
     @CurrentUser() user: AuthenticatedUser,
@@ -104,15 +142,25 @@ export class TicketsController {
   @RequireCsrf()
   @Post(':id/assign')
   @ApiOperation({ summary: 'Assign an unassigned ticket to an agent' })
-  assign(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: AssignTicketDto) {
+  assign(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: AssignTicketDto,
+  ) {
     return this.ticketsService.assign(user, id, dto);
   }
 
   @Roles(...STAFF_ROLES)
   @RequireCsrf()
   @Post(':id/transfer')
-  @ApiOperation({ summary: 'Reassign an already-assigned ticket to a different agent' })
-  transfer(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: AssignTicketDto) {
+  @ApiOperation({
+    summary: 'Reassign an already-assigned ticket to a different agent',
+  })
+  transfer(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: AssignTicketDto,
+  ) {
     return this.ticketsService.assign(user, id, dto);
   }
 
@@ -127,7 +175,9 @@ export class TicketsController {
   @Roles(...STAFF_ROLES)
   @RequireCsrf()
   @Post(':id/escalate')
-  @ApiOperation({ summary: 'Escalate a ticket — bumps priority and optionally reassigns' })
+  @ApiOperation({
+    summary: 'Escalate a ticket — bumps priority and optionally reassigns',
+  })
   escalate(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
@@ -140,7 +190,11 @@ export class TicketsController {
   @RequireCsrf()
   @Post(':id/merge')
   @ApiOperation({ summary: 'Merge this ticket into another, surviving ticket' })
-  merge(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: MergeTicketDto) {
+  merge(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: MergeTicketDto,
+  ) {
     return this.ticketsService.merge(user, id, dto);
   }
 
@@ -148,7 +202,11 @@ export class TicketsController {
   @RequireCsrf()
   @Post(':id/split')
   @ApiOperation({ summary: 'Split selected comments off into a new ticket' })
-  split(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: SplitTicketDto) {
+  split(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SplitTicketDto,
+  ) {
     return this.ticketsService.split(user, id, dto);
   }
 
@@ -156,7 +214,11 @@ export class TicketsController {
   @RequireCsrf()
   @Post(':id/tags/:tagId')
   @ApiOperation({ summary: 'Add a tag to a ticket' })
-  addTag(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Param('tagId') tagId: string) {
+  addTag(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('tagId') tagId: string,
+  ) {
     return this.ticketsService.addTag(user, id, tagId);
   }
 
@@ -164,7 +226,11 @@ export class TicketsController {
   @RequireCsrf()
   @Delete(':id/tags/:tagId')
   @ApiOperation({ summary: 'Remove a tag from a ticket' })
-  removeTag(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Param('tagId') tagId: string) {
+  removeTag(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('tagId') tagId: string,
+  ) {
     return this.ticketsService.removeTag(user, id, tagId);
   }
 

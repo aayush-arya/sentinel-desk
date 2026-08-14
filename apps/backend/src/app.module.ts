@@ -21,6 +21,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { KnowledgeBaseModule } from './knowledge-base/knowledge-base.module';
 import { MacrosModule } from './macros/macros.module';
 import { SavedFiltersModule } from './saved-filters/saved-filters.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
+import { ApiKeysModule } from './api-keys/api-keys.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -76,6 +78,8 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
     KnowledgeBaseModule,
     MacrosModule,
     SavedFiltersModule,
+    WebhooksModule,
+    ApiKeysModule,
     HealthModule,
   ],
   providers: [

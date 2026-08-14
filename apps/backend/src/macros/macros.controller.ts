@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
 import { MacrosService } from './macros.service';
@@ -9,7 +19,12 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { RequireCsrf } from '../common/decorators/require-csrf.decorator';
 import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 
-const STAFF_ROLES = [RoleName.AGENT, RoleName.SENIOR_AGENT, RoleName.MANAGER, RoleName.ADMIN];
+const STAFF_ROLES = [
+  RoleName.AGENT,
+  RoleName.SENIOR_AGENT,
+  RoleName.MANAGER,
+  RoleName.ADMIN,
+];
 
 @ApiTags('macros')
 @Roles(...STAFF_ROLES)
@@ -33,7 +48,11 @@ export class MacrosController {
   @RequireCsrf()
   @Patch(':id')
   @ApiOperation({ summary: 'Update a macro' })
-  update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: UpdateMacroDto) {
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateMacroDto,
+  ) {
     return this.macros.update(user, id, dto);
   }
 
@@ -41,7 +60,10 @@ export class MacrosController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a macro' })
-  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  async remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     await this.macros.remove(user, id);
   }
 }

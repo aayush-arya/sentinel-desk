@@ -3,8 +3,12 @@ import type { ApiErrorBody } from '@sentinel-desk/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
+// For direct-download links (CSV/PDF export) that navigate the browser instead of
+// going through axios - those need the raw base URL, not an axios instance.
+export const API_BASE_URL = `${API_URL}/api`;
+
 export const apiClient = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: API_BASE_URL,
   withCredentials: true,
 });
 

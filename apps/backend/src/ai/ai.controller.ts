@@ -8,7 +8,12 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { RequireCsrf } from '../common/decorators/require-csrf.decorator';
 import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 
-const STAFF_ROLES = [RoleName.AGENT, RoleName.SENIOR_AGENT, RoleName.MANAGER, RoleName.ADMIN];
+const STAFF_ROLES = [
+  RoleName.AGENT,
+  RoleName.SENIOR_AGENT,
+  RoleName.MANAGER,
+  RoleName.ADMIN,
+];
 
 // These are agent-triage tools, not customer-facing — gated to staff at the controller
 // level. Each handler calls TicketsService.findOne first purely for its access-check
@@ -26,7 +31,10 @@ export class AiController {
   @RequireCsrf()
   @Post('summary')
   @ApiOperation({ summary: 'AI-generated summary of the ticket thread so far' })
-  async summarize(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  async summarize(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     await this.tickets.findOne(user, id);
     const summary = await this.ai.summarizeTicket(id);
     return { summary };
@@ -34,8 +42,13 @@ export class AiController {
 
   @RequireCsrf()
   @Post('suggest-reply')
-  @ApiOperation({ summary: 'AI-drafted reply for the agent to review, edit, and send' })
-  async suggestReply(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  @ApiOperation({
+    summary: 'AI-drafted reply for the agent to review, edit, and send',
+  })
+  async suggestReply(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     await this.tickets.findOne(user, id);
     const reply = await this.ai.suggestReply(id);
     return { reply };
@@ -43,8 +56,14 @@ export class AiController {
 
   @RequireCsrf()
   @Post('duplicates')
-  @ApiOperation({ summary: 'Find likely-duplicate tickets among recent open tickets in the org' })
-  async duplicates(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  @ApiOperation({
+    summary:
+      'Find likely-duplicate tickets among recent open tickets in the org',
+  })
+  async duplicates(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     await this.tickets.findOne(user, id);
     const candidates = await this.ai.findDuplicates(user.organizationId, id);
     return { candidates };
@@ -52,10 +71,19 @@ export class AiController {
 
   @RequireCsrf()
   @Post('kb-suggestions')
-  @ApiOperation({ summary: 'Recommend published knowledge base articles relevant to this ticket' })
-  async kbSuggestions(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  @ApiOperation({
+    summary:
+      'Recommend published knowledge base articles relevant to this ticket',
+  })
+  async kbSuggestions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     await this.tickets.findOne(user, id);
-    const suggestions = await this.ai.recommendKnowledgeArticles(user.organizationId, id);
+    const suggestions = await this.ai.recommendKnowledgeArticles(
+      user.organizationId,
+      id,
+    );
     return { suggestions };
   }
 }

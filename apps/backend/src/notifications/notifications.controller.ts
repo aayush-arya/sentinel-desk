@@ -13,8 +13,15 @@ export class NotificationsController {
 
   @Get()
   @ApiOperation({ summary: "List the current user's notifications" })
-  findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: QueryNotificationsDto) {
-    return this.notificationsService.findAllForUser(user.id, query.page, query.pageSize);
+  findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: QueryNotificationsDto,
+  ) {
+    return this.notificationsService.findAllForUser(
+      user.id,
+      query.page,
+      query.pageSize,
+    );
   }
 
   @Get('unread-count')
@@ -26,7 +33,10 @@ export class NotificationsController {
   @RequireCsrf()
   @Patch(':id/read')
   @ApiOperation({ summary: 'Mark one notification as read' })
-  async markRead(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  async markRead(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     await this.notificationsService.markRead(user.id, id);
   }
 

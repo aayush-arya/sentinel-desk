@@ -29,7 +29,10 @@ export class StorageService implements OnModuleInit {
     try {
       const exists = await this.client.bucketExists(this.bucket);
       if (!exists) {
-        await this.client.makeBucket(this.bucket, this.config.get('storage.region', { infer: true }));
+        await this.client.makeBucket(
+          this.bucket,
+          this.config.get('storage.region', { infer: true }),
+        );
       }
       // Objects (avatars, ticket attachments) are served directly via public URL rather
       // than presigned links, so the bucket is granted read-only public access.

@@ -37,7 +37,10 @@ export class AuditService {
         },
       });
     } catch (error) {
-      this.logger.error(`Failed to record audit log for action "${entry.action}"`, error);
+      this.logger.error(
+        `Failed to record audit log for action "${entry.action}"`,
+        error,
+      );
     }
   }
 
@@ -52,7 +55,16 @@ export class AuditService {
     const [items, total] = await Promise.all([
       this.prisma.auditLog.findMany({
         where,
-        include: { actor: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } } },
+        include: {
+          actor: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -60,6 +72,14 @@ export class AuditService {
       this.prisma.auditLog.count({ where }),
     ]);
 
-    return { items, meta: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) } };
+    return {
+      items,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      },
+    };
   }
 }

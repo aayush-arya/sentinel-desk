@@ -17,7 +17,8 @@ export class TagsService {
     const existing = await this.prisma.tag.findUnique({
       where: { organizationId_name: { organizationId, name: dto.name } },
     });
-    if (existing) throw new ConflictException('A tag with this name already exists');
+    if (existing)
+      throw new ConflictException('A tag with this name already exists');
 
     return this.prisma.tag.create({
       data: { organizationId, name: dto.name, color: dto.color },

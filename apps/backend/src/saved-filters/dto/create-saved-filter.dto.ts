@@ -8,7 +8,10 @@ export class CreateSavedFilterDto {
   @MaxLength(60)
   name!: string;
 
-  @ApiProperty({ description: 'Arbitrary ticket filter state (status/priority/assignee/search/...)' })
+  @ApiProperty({
+    description:
+      'Arbitrary ticket filter state (status/priority/assignee/search/...)',
+  })
   @IsObject()
   filters!: Record<string, unknown>;
 }

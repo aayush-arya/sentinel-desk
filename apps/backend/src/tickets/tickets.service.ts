@@ -19,6 +19,7 @@ import { SlaService } from '../sla/sla.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 import { sanitizeRichText } from '../common/utils/sanitize-html.util';
 import { AI_ENRICHMENT_QUEUE } from '../ai/ai.constants';
 import type { AiEnrichmentJobData } from '../ai/ai-enrichment.processor';
@@ -35,8 +36,24 @@ import type { SplitTicketDto } from './dto/split-ticket.dto';
 import type { QueryTicketsDto } from './dto/query-tickets.dto';
 
 const TICKET_LIST_INCLUDE = {
-  requester: { select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true } },
-  assignee: { select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true } },
+  requester: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      avatarUrl: true,
+    },
+  },
+  assignee: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      avatarUrl: true,
+    },
+  },
   tags: { include: { tag: true } },
   _count: { select: { comments: true } },
 } satisfies Prisma.TicketInclude;
@@ -46,7 +63,16 @@ const TICKET_DETAIL_INCLUDE = {
   comments: {
     orderBy: { createdAt: 'asc' },
     include: {
-      author: { select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true, roleId: true } },
+      author: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          avatarUrl: true,
+          roleId: true,
+        },
+      },
       attachments: true,
     },
   },
@@ -54,7 +80,9 @@ const TICKET_DETAIL_INCLUDE = {
   splitFrom: { select: { id: true, number: true, subject: true } },
 } satisfies Prisma.TicketInclude;
 
-type TicketWithDetail = Prisma.TicketGetPayload<{ include: typeof TICKET_DETAIL_INCLUDE }>;
+type TicketWithDetail = Prisma.TicketGetPayload<{
+  include: typeof TICKET_DETAIL_INCLUDE;
+}>;
 
 @Injectable()
 export class TicketsService {
@@ -65,7 +93,9 @@ export class TicketsService {
     private readonly realtime: RealtimeGateway,
     private readonly notifications: NotificationsService,
     private readonly audit: AuditService,
-    @InjectQueue(AI_ENRICHMENT_QUEUE) private readonly aiQueue: Queue<AiEnrichmentJobData>,
+    private readonly webhooks: WebhooksService,
+    @InjectQueue(AI_ENRICHMENT_QUEUE)
+    private readonly aiQueue: Queue<AiEnrichmentJobData>,
   ) {}
 
   /** Tells anyone viewing this ticket, plus the org's list/dashboard views, to refresh. */
@@ -74,21 +104,34 @@ export class TicketsService {
     this.realtime.emitToOrg(organizationId, 'ticket:updated', { ticketId });
   }
 
-  async create(user: AuthenticatedUser, dto: CreateTicketDto, files: Express.Multer.File[] = []) {
+  async create(
+    user: AuthenticatedUser,
+    dto: CreateTicketDto,
+    files: Express.Multer.File[] = [],
+  ) {
     let requesterId = user.id;
     if (dto.requesterId) {
       if (!isStaff(user)) {
-        throw new ForbiddenException('Customers cannot file tickets on behalf of others');
+        throw new ForbiddenException(
+          'Customers cannot file tickets on behalf of others',
+        );
       }
-      const requester = await this.prisma.user.findUnique({ where: { id: dto.requesterId } });
+      const requester = await this.prisma.user.findUnique({
+        where: { id: dto.requesterId },
+      });
       if (!requester || requester.organizationId !== user.organizationId) {
-        throw new BadRequestException('requesterId must be a member of your organization');
+        throw new BadRequestException(
+          'requesterId must be a member of your organization',
+        );
       }
       requesterId = dto.requesterId;
     }
 
     const priority = dto.priority ?? TicketPriority.MEDIUM;
-    const dueDates = await this.sla.computeDueDatesForNewTicket(user.organizationId, priority);
+    const dueDates = await this.sla.computeDueDatesForNewTicket(
+      user.organizationId,
+      priority,
+    );
 
     const ticket = await this.prisma.$transaction(async (tx) => {
       const org = await tx.organization.update({
@@ -123,7 +166,11 @@ export class TicketsService {
       });
 
       await tx.ticketHistory.create({
-        data: { ticketId: created.id, actorId: user.id, action: TicketHistoryAction.CREATED },
+        data: {
+          ticketId: created.id,
+          actorId: user.id,
+          action: TicketHistoryAction.CREATED,
+        },
       });
 
       return { created, comment };
@@ -133,8 +180,13 @@ export class TicketsService {
       await this.saveAttachments(ticket.comment.id, files);
     }
 
-    this.realtime.emitToOrg(user.organizationId, 'ticket:created', { ticketId: ticket.created.id });
-    await this.aiQueue.add('ticket-created', { kind: 'ticket-created', ticketId: ticket.created.id });
+    this.realtime.emitToOrg(user.organizationId, 'ticket:created', {
+      ticketId: ticket.created.id,
+    });
+    await this.aiQueue.add('ticket-created', {
+      kind: 'ticket-created',
+      ticketId: ticket.created.id,
+    });
     await this.audit.record({
       organizationId: user.organizationId,
       actorUserId: user.id,
@@ -143,12 +195,22 @@ export class TicketsService {
       entityId: ticket.created.id,
       metadata: { number: ticket.created.number, subject: dto.subject },
     });
+    await this.webhooks.trigger(user.organizationId, 'ticket.created', {
+      ticketId: ticket.created.id,
+      number: ticket.created.number,
+      subject: dto.subject,
+    });
 
     return this.findOne(user, ticket.created.id);
   }
 
-  async findAll(user: AuthenticatedUser, query: QueryTicketsDto) {
-    const where: Prisma.TicketWhereInput = { organizationId: user.organizationId };
+  private buildTicketWhere(
+    user: AuthenticatedUser,
+    query: QueryTicketsDto,
+  ): Prisma.TicketWhereInput {
+    const where: Prisma.TicketWhereInput = {
+      organizationId: user.organizationId,
+    };
 
     if (!isStaff(user)) {
       where.requesterId = user.id;
@@ -162,13 +224,78 @@ export class TicketsService {
     if (query.search) {
       where.OR = [
         { subject: { contains: query.search, mode: 'insensitive' } },
-        { comments: { some: { body: { contains: query.search, mode: 'insensitive' } } } },
+        {
+          comments: {
+            some: { body: { contains: query.search, mode: 'insensitive' } },
+          },
+        },
       ];
     }
+    return where;
+  }
+
+  // Same filters as findAll, no pagination - capped instead so a very large org can't
+  // trigger an unbounded export in one request.
+  async exportCsv(
+    user: AuthenticatedUser,
+    query: QueryTicketsDto,
+  ): Promise<string> {
+    const where = this.buildTicketWhere(user, query);
+    const tickets = await this.prisma.ticket.findMany({
+      where,
+      include: TICKET_LIST_INCLUDE,
+      orderBy: { updatedAt: 'desc' },
+      take: 5000,
+    });
+
+    const escape = (value: unknown): string => {
+      const str = value == null ? '' : String(value);
+      return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+    };
+
+    const header = [
+      'Number',
+      'Subject',
+      'Status',
+      'Priority',
+      'Requester',
+      'Assignee',
+      'Tags',
+      'Comments',
+      'Created',
+      'Updated',
+      'ResponseBreached',
+      'ResolutionBreached',
+    ];
+    const rows = tickets.map((t) =>
+      [
+        t.number,
+        t.subject,
+        t.status,
+        t.priority,
+        `${t.requester.firstName} ${t.requester.lastName}`,
+        t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : '',
+        t.tags.map((tt) => tt.tag.name).join('; '),
+        t._count.comments,
+        t.createdAt.toISOString(),
+        t.updatedAt.toISOString(),
+        t.responseBreached,
+        t.resolutionBreached,
+      ]
+        .map(escape)
+        .join(','),
+    );
+    return [header.join(','), ...rows].join('\n');
+  }
+
+  async findAll(user: AuthenticatedUser, query: QueryTicketsDto) {
+    const where = this.buildTicketWhere(user, query);
 
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
-    const orderBy = { [query.sortBy ?? 'updatedAt']: query.sortOrder ?? 'desc' };
+    const orderBy = {
+      [query.sortBy ?? 'updatedAt']: query.sortOrder ?? 'desc',
+    };
 
     const [items, total] = await Promise.all([
       this.prisma.ticket.findMany({
@@ -183,23 +310,45 @@ export class TicketsService {
 
     return {
       items: items.map((t) => this.toTicketSummary(t, isStaff(user))),
-      meta: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      },
     };
   }
 
   async findOne(user: AuthenticatedUser, ticketId: string) {
-    const ticket = await this.getTicketOrThrow(user, ticketId, TICKET_DETAIL_INCLUDE);
+    const ticket = await this.getTicketOrThrow(
+      user,
+      ticketId,
+      TICKET_DETAIL_INCLUDE,
+    );
     return this.toTicketDetail(ticket, user);
   }
 
-  async update(user: AuthenticatedUser, ticketId: string, dto: UpdateTicketDto) {
-    const ticket = await this.getTicketOrThrow(user, ticketId, TICKET_DETAIL_INCLUDE);
+  async update(
+    user: AuthenticatedUser,
+    ticketId: string,
+    dto: UpdateTicketDto,
+  ) {
+    const ticket = await this.getTicketOrThrow(
+      user,
+      ticketId,
+      TICKET_DETAIL_INCLUDE,
+    );
 
     if (!isStaff(user)) {
       if (dto.priority || dto.status) {
-        throw new ForbiddenException('Only staff can change priority or status');
+        throw new ForbiddenException(
+          'Only staff can change priority or status',
+        );
       }
-      if (ticket.status !== TicketStatus.OPEN && ticket.status !== TicketStatus.PENDING) {
+      if (
+        ticket.status !== TicketStatus.OPEN &&
+        ticket.status !== TicketStatus.PENDING
+      ) {
         throw new ForbiddenException('This ticket can no longer be edited');
       }
     }
@@ -211,9 +360,13 @@ export class TicketsService {
     }
     if (dto.priority && dto.priority !== ticket.priority) {
       data.priority = dto.priority;
-      const dueDates = await this.sla.recomputeDueDatesForPriorityChange(ticketId, dto.priority);
+      const dueDates = await this.sla.recomputeDueDatesForPriorityChange(
+        ticketId,
+        dto.priority,
+      );
       if (dueDates.responseDueAt) data.responseDueAt = dueDates.responseDueAt;
-      if (dueDates.resolutionDueAt) data.resolutionDueAt = dueDates.resolutionDueAt;
+      if (dueDates.resolutionDueAt)
+        data.resolutionDueAt = dueDates.resolutionDueAt;
       historyEntries.push({
         ticketId,
         actorId: user.id,
@@ -222,15 +375,24 @@ export class TicketsService {
       });
     }
 
-    const PAUSING_STATUSES: TicketStatus[] = [TicketStatus.PENDING, TicketStatus.ON_HOLD];
+    const PAUSING_STATUSES: TicketStatus[] = [
+      TicketStatus.PENDING,
+      TicketStatus.ON_HOLD,
+    ];
     let slaTransition: 'pause' | 'resume' | null = null;
     if (dto.status && dto.status !== ticket.status) {
       data.status = dto.status;
       if (dto.status === TicketStatus.RESOLVED) data.resolvedAt = new Date();
       if (dto.status === TicketStatus.CLOSED) data.closedAt = new Date();
-      if (!PAUSING_STATUSES.includes(ticket.status) && PAUSING_STATUSES.includes(dto.status)) {
+      if (
+        !PAUSING_STATUSES.includes(ticket.status) &&
+        PAUSING_STATUSES.includes(dto.status)
+      ) {
         slaTransition = 'pause';
-      } else if (PAUSING_STATUSES.includes(ticket.status) && dto.status === TicketStatus.OPEN) {
+      } else if (
+        PAUSING_STATUSES.includes(ticket.status) &&
+        dto.status === TicketStatus.OPEN
+      ) {
         slaTransition = 'resume';
       }
       historyEntries.push({
@@ -243,11 +405,14 @@ export class TicketsService {
 
     await this.prisma.$transaction([
       this.prisma.ticket.update({ where: { id: ticketId }, data }),
-      ...(historyEntries.length ? [this.prisma.ticketHistory.createMany({ data: historyEntries })] : []),
+      ...(historyEntries.length
+        ? [this.prisma.ticketHistory.createMany({ data: historyEntries })]
+        : []),
     ]);
 
     if (slaTransition === 'pause') await this.sla.pause(ticketId, user.id);
-    else if (slaTransition === 'resume') await this.sla.resume(ticketId, user.id);
+    else if (slaTransition === 'resume')
+      await this.sla.resume(ticketId, user.id);
 
     if (dto.priority && dto.priority !== ticket.priority) {
       await this.audit.record({
@@ -268,6 +433,16 @@ export class TicketsService {
         entityId: ticketId,
         metadata: { from: ticket.status, to: dto.status },
       });
+      await this.webhooks.trigger(
+        user.organizationId,
+        'ticket.status_changed',
+        {
+          ticketId,
+          number: ticket.number,
+          from: ticket.status,
+          to: dto.status,
+        },
+      );
     }
 
     this.broadcastTicketChanged(user.organizationId, ticketId);
@@ -275,9 +450,18 @@ export class TicketsService {
   }
 
   async reopen(user: AuthenticatedUser, ticketId: string) {
-    const ticket = await this.getTicketOrThrow(user, ticketId, TICKET_DETAIL_INCLUDE);
-    if (ticket.status !== TicketStatus.RESOLVED && ticket.status !== TicketStatus.CLOSED) {
-      throw new BadRequestException('Only resolved or closed tickets can be reopened');
+    const ticket = await this.getTicketOrThrow(
+      user,
+      ticketId,
+      TICKET_DETAIL_INCLUDE,
+    );
+    if (
+      ticket.status !== TicketStatus.RESOLVED &&
+      ticket.status !== TicketStatus.CLOSED
+    ) {
+      throw new BadRequestException(
+        'Only resolved or closed tickets can be reopened',
+      );
     }
 
     await this.prisma.$transaction([
@@ -291,7 +475,11 @@ export class TicketsService {
         },
       }),
       this.prisma.ticketHistory.create({
-        data: { ticketId, actorId: user.id, action: TicketHistoryAction.REOPENED },
+        data: {
+          ticketId,
+          actorId: user.id,
+          action: TicketHistoryAction.REOPENED,
+        },
       }),
     ]);
 
@@ -309,12 +497,22 @@ export class TicketsService {
   }
 
   async rateCsat(user: AuthenticatedUser, ticketId: string, dto: RateCsatDto) {
-    const ticket = await this.getTicketOrThrow(user, ticketId, TICKET_LIST_INCLUDE);
+    const ticket = await this.getTicketOrThrow(
+      user,
+      ticketId,
+      TICKET_LIST_INCLUDE,
+    );
     // getTicketOrThrow already 404s a customer trying to reach someone else's ticket,
     // so the only remaining check is that staff can't rate on a customer's behalf.
-    if (isStaff(user)) throw new ForbiddenException('Only the requester can rate a ticket');
-    if (ticket.status !== TicketStatus.RESOLVED && ticket.status !== TicketStatus.CLOSED) {
-      throw new BadRequestException('Ticket must be resolved or closed before it can be rated');
+    if (isStaff(user))
+      throw new ForbiddenException('Only the requester can rate a ticket');
+    if (
+      ticket.status !== TicketStatus.RESOLVED &&
+      ticket.status !== TicketStatus.CLOSED
+    ) {
+      throw new BadRequestException(
+        'Ticket must be resolved or closed before it can be rated',
+      );
     }
     if (ticket.csatRatedAt) {
       throw new BadRequestException('This ticket has already been rated');
@@ -322,7 +520,11 @@ export class TicketsService {
 
     await this.prisma.ticket.update({
       where: { id: ticketId },
-      data: { csatRating: dto.rating, csatComment: dto.comment, csatRatedAt: new Date() },
+      data: {
+        csatRating: dto.rating,
+        csatComment: dto.comment,
+        csatRatedAt: new Date(),
+      },
     });
 
     this.broadcastTicketChanged(user.organizationId, ticketId);
@@ -335,16 +537,24 @@ export class TicketsService {
     dto: CreateCommentDto,
     files: Express.Multer.File[] = [],
   ) {
-    const ticket = await this.getTicketOrThrow(user, ticketId, TICKET_DETAIL_INCLUDE);
+    const ticket = await this.getTicketOrThrow(
+      user,
+      ticketId,
+      TICKET_DETAIL_INCLUDE,
+    );
     const staff = isStaff(user);
 
-    const visibility = staff && dto.visibility ? dto.visibility : CommentVisibility.PUBLIC;
+    const visibility =
+      staff && dto.visibility ? dto.visibility : CommentVisibility.PUBLIC;
     if (!staff && dto.visibility === CommentVisibility.INTERNAL) {
       throw new ForbiddenException('Customers cannot create internal notes');
     }
 
-    const wasClosed = ticket.status === TicketStatus.RESOLVED || ticket.status === TicketStatus.CLOSED;
-    const autoReopen = !staff && wasClosed && visibility === CommentVisibility.PUBLIC;
+    const wasClosed =
+      ticket.status === TicketStatus.RESOLVED ||
+      ticket.status === TicketStatus.CLOSED;
+    const autoReopen =
+      !staff && wasClosed && visibility === CommentVisibility.PUBLIC;
 
     const isFirstStaffReply =
       staff &&
@@ -354,16 +564,22 @@ export class TicketsService {
 
     const comment = await this.prisma.$transaction(async (tx) => {
       const created = await tx.comment.create({
-        data: { ticketId, authorId: user.id, visibility, body: sanitizeRichText(dto.body) },
+        data: {
+          ticketId,
+          authorId: user.id,
+          visibility,
+          body: sanitizeRichText(dto.body),
+        },
       });
 
       await tx.ticketHistory.create({
         data: {
           ticketId,
           actorId: user.id,
-          action: visibility === CommentVisibility.INTERNAL
-            ? TicketHistoryAction.NOTE_ADDED
-            : TicketHistoryAction.COMMENT_ADDED,
+          action:
+            visibility === CommentVisibility.INTERNAL
+              ? TicketHistoryAction.NOTE_ADDED
+              : TicketHistoryAction.COMMENT_ADDED,
         },
       });
 
@@ -380,7 +596,11 @@ export class TicketsService {
       }
       if (autoReopen) {
         await tx.ticketHistory.create({
-          data: { ticketId, actorId: user.id, action: TicketHistoryAction.REOPENED },
+          data: {
+            ticketId,
+            actorId: user.id,
+            action: TicketHistoryAction.REOPENED,
+          },
         });
       }
 
@@ -398,11 +618,24 @@ export class TicketsService {
       // correctly), rather than duplicating that filtering logic over the socket.
       const author = await this.prisma.user.findUniqueOrThrow({
         where: { id: user.id },
-        select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true, roleId: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          avatarUrl: true,
+          roleId: true,
+        },
       });
       this.realtime.emitToTicket(ticketId, 'ticket:comment:new', {
         ticketId,
-        comment: { id: comment.id, body: comment.body, visibility, createdAt: comment.createdAt, author },
+        comment: {
+          id: comment.id,
+          body: comment.body,
+          visibility,
+          createdAt: comment.createdAt,
+          author,
+        },
       });
 
       const recipientId = staff ? ticket.requesterId : ticket.assigneeId;
@@ -419,7 +652,10 @@ export class TicketsService {
 
       // Sentiment is only meaningful as a read on the customer, not on an agent's own tone.
       if (!staff) {
-        await this.aiQueue.add('comment-sentiment', { kind: 'comment-sentiment', commentId: comment.id });
+        await this.aiQueue.add('comment-sentiment', {
+          kind: 'comment-sentiment',
+          commentId: comment.id,
+        });
       }
     }
     this.broadcastTicketChanged(user.organizationId, ticketId);
@@ -427,12 +663,24 @@ export class TicketsService {
     return this.findOne(user, ticketId);
   }
 
-  async assign(user: AuthenticatedUser, ticketId: string, dto: AssignTicketDto) {
-    const ticket = await this.getTicketOrThrow(user, ticketId, TICKET_DETAIL_INCLUDE);
+  async assign(
+    user: AuthenticatedUser,
+    ticketId: string,
+    dto: AssignTicketDto,
+  ) {
+    const ticket = await this.getTicketOrThrow(
+      user,
+      ticketId,
+      TICKET_DETAIL_INCLUDE,
+    );
 
-    const newAssignee = await this.prisma.user.findUnique({ where: { id: dto.assigneeId } });
+    const newAssignee = await this.prisma.user.findUnique({
+      where: { id: dto.assigneeId },
+    });
     if (!newAssignee || newAssignee.organizationId !== user.organizationId) {
-      throw new BadRequestException('assigneeId must be a member of your organization');
+      throw new BadRequestException(
+        'assigneeId must be a member of your organization',
+      );
     }
 
     const action = ticket.assigneeId
@@ -440,7 +688,10 @@ export class TicketsService {
       : TicketHistoryAction.ASSIGNED;
 
     await this.prisma.$transaction([
-      this.prisma.ticket.update({ where: { id: ticketId }, data: { assigneeId: dto.assigneeId } }),
+      this.prisma.ticket.update({
+        where: { id: ticketId },
+        data: { assigneeId: dto.assigneeId },
+      }),
       this.prisma.ticketHistory.create({
         data: {
           ticketId,
@@ -464,7 +715,10 @@ export class TicketsService {
     await this.audit.record({
       organizationId: user.organizationId,
       actorUserId: user.id,
-      action: action === TicketHistoryAction.TRANSFERRED ? 'ticket.transferred' : 'ticket.assigned',
+      action:
+        action === TicketHistoryAction.TRANSFERRED
+          ? 'ticket.transferred'
+          : 'ticket.assigned',
       entityType: 'Ticket',
       entityId: ticketId,
       metadata: { from: ticket.assigneeId, to: dto.assigneeId },
@@ -474,11 +728,18 @@ export class TicketsService {
   }
 
   async unassign(user: AuthenticatedUser, ticketId: string) {
-    const ticket = await this.getTicketOrThrow(user, ticketId, TICKET_DETAIL_INCLUDE);
+    const ticket = await this.getTicketOrThrow(
+      user,
+      ticketId,
+      TICKET_DETAIL_INCLUDE,
+    );
     if (!ticket.assigneeId) return this.findOne(user, ticketId);
 
     await this.prisma.$transaction([
-      this.prisma.ticket.update({ where: { id: ticketId }, data: { assigneeId: null } }),
+      this.prisma.ticket.update({
+        where: { id: ticketId },
+        data: { assigneeId: null },
+      }),
       this.prisma.ticketHistory.create({
         data: {
           ticketId,
@@ -500,17 +761,31 @@ export class TicketsService {
     return this.findOne(user, ticketId);
   }
 
-  async escalate(user: AuthenticatedUser, ticketId: string, dto: EscalateTicketDto) {
-    const ticket = await this.getTicketOrThrow(user, ticketId, TICKET_DETAIL_INCLUDE);
+  async escalate(
+    user: AuthenticatedUser,
+    ticketId: string,
+    dto: EscalateTicketDto,
+  ) {
+    const ticket = await this.getTicketOrThrow(
+      user,
+      ticketId,
+      TICKET_DETAIL_INCLUDE,
+    );
 
     if (dto.newAssigneeId) {
-      const assignee = await this.prisma.user.findUnique({ where: { id: dto.newAssigneeId } });
+      const assignee = await this.prisma.user.findUnique({
+        where: { id: dto.newAssigneeId },
+      });
       if (!assignee || assignee.organizationId !== user.organizationId) {
-        throw new BadRequestException('newAssigneeId must be a member of your organization');
+        throw new BadRequestException(
+          'newAssigneeId must be a member of your organization',
+        );
       }
     }
 
-    const data: Prisma.TicketUncheckedUpdateInput = { priority: dto.priority ?? 'URGENT' };
+    const data: Prisma.TicketUncheckedUpdateInput = {
+      priority: dto.priority ?? 'URGENT',
+    };
     if (dto.newAssigneeId) data.assigneeId = dto.newAssigneeId;
 
     await this.prisma.$transaction([
@@ -520,7 +795,10 @@ export class TicketsService {
           ticketId,
           actorId: user.id,
           action: TicketHistoryAction.ESCALATED,
-          metadata: { reason: dto.reason, newAssigneeId: dto.newAssigneeId ?? null },
+          metadata: {
+            reason: dto.reason,
+            newAssigneeId: dto.newAssigneeId ?? null,
+          },
         },
       }),
     ]);
@@ -542,7 +820,17 @@ export class TicketsService {
       action: 'ticket.escalated',
       entityType: 'Ticket',
       entityId: ticketId,
-      metadata: { reason: dto.reason, priority: data.priority, newAssigneeId: dto.newAssigneeId ?? null },
+      metadata: {
+        reason: dto.reason,
+        priority: data.priority,
+        newAssigneeId: dto.newAssigneeId ?? null,
+      },
+    });
+    await this.webhooks.trigger(user.organizationId, 'ticket.escalated', {
+      ticketId,
+      number: ticket.number,
+      reason: dto.reason,
+      priority: data.priority,
     });
     this.broadcastTicketChanged(user.organizationId, ticketId);
     return this.findOne(user, ticketId);
@@ -563,14 +851,21 @@ export class TicketsService {
     await this.prisma.$transaction([
       this.prisma.ticket.update({
         where: { id: ticketId },
-        data: { mergedIntoId: target.id, status: TicketStatus.CLOSED, closedAt: new Date() },
+        data: {
+          mergedIntoId: target.id,
+          status: TicketStatus.CLOSED,
+          closedAt: new Date(),
+        },
       }),
       this.prisma.ticketHistory.create({
         data: {
           ticketId,
           actorId: user.id,
           action: TicketHistoryAction.MERGED,
-          metadata: { intoTicketId: target.id, intoTicketNumber: target.number },
+          metadata: {
+            intoTicketId: target.id,
+            intoTicketNumber: target.number,
+          },
         },
       }),
       this.prisma.ticketHistory.create({
@@ -578,7 +873,10 @@ export class TicketsService {
           ticketId: target.id,
           actorId: user.id,
           action: TicketHistoryAction.MERGED_FROM,
-          metadata: { fromTicketId: source.id, fromTicketNumber: source.number },
+          metadata: {
+            fromTicketId: source.id,
+            fromTicketNumber: source.number,
+          },
         },
       }),
     ]);
@@ -597,13 +895,24 @@ export class TicketsService {
   }
 
   async split(user: AuthenticatedUser, ticketId: string, dto: SplitTicketDto) {
-    const source = await this.getTicketOrThrow(user, ticketId, TICKET_DETAIL_INCLUDE);
-    const commentsToCopy = source.comments.filter((c) => dto.commentIds.includes(c.id));
+    const source = await this.getTicketOrThrow(
+      user,
+      ticketId,
+      TICKET_DETAIL_INCLUDE,
+    );
+    const commentsToCopy = source.comments.filter((c) =>
+      dto.commentIds.includes(c.id),
+    );
     if (commentsToCopy.length !== dto.commentIds.length) {
-      throw new BadRequestException('One or more commentIds do not belong to this ticket');
+      throw new BadRequestException(
+        'One or more commentIds do not belong to this ticket',
+      );
     }
 
-    const dueDates = await this.sla.computeDueDatesForNewTicket(user.organizationId, source.priority);
+    const dueDates = await this.sla.computeDueDatesForNewTicket(
+      user.organizationId,
+      source.priority,
+    );
 
     const newTicketId = await this.prisma.$transaction(async (tx) => {
       const org = await tx.organization.update({
@@ -640,7 +949,11 @@ export class TicketsService {
       }
 
       await tx.ticketHistory.create({
-        data: { ticketId: newTicket.id, actorId: user.id, action: TicketHistoryAction.CREATED },
+        data: {
+          ticketId: newTicket.id,
+          actorId: user.id,
+          action: TicketHistoryAction.CREATED,
+        },
       });
       await tx.ticketHistory.create({
         data: {
@@ -654,7 +967,9 @@ export class TicketsService {
       return newTicket.id;
     });
 
-    this.realtime.emitToOrg(user.organizationId, 'ticket:created', { ticketId: newTicketId });
+    this.realtime.emitToOrg(user.organizationId, 'ticket:created', {
+      ticketId: newTicketId,
+    });
     await this.audit.record({
       organizationId: user.organizationId,
       actorUserId: user.id,
@@ -716,7 +1031,16 @@ export class TicketsService {
     await this.getTicketOrThrow(user, ticketId, TICKET_LIST_INCLUDE);
     const entries = await this.prisma.ticketHistory.findMany({
       where: { ticketId },
-      include: { actor: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } } },
+      include: {
+        actor: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
     return entries;
@@ -729,20 +1053,30 @@ export class TicketsService {
     ticketId: string,
     include: T,
   ) {
-    const ticket = await this.prisma.ticket.findUnique({ where: { id: ticketId }, include });
+    const ticket = await this.prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include,
+    });
     if (!ticket || ticket.organizationId !== user.organizationId) {
       throw new NotFoundException('Ticket not found');
     }
     if (!isStaff(user) && ticket.requesterId !== user.id) {
       throw new NotFoundException('Ticket not found');
     }
-    return ticket as Prisma.TicketGetPayload<{ include: T }>;
+    return ticket;
   }
 
-  private async saveAttachments(commentId: string, files: Express.Multer.File[]) {
+  private async saveAttachments(
+    commentId: string,
+    files: Express.Multer.File[],
+  ) {
     for (const file of files) {
       const key = `attachments/${commentId}-${Date.now()}-${file.originalname}`;
-      const fileUrl = await this.storage.uploadBuffer(key, file.buffer, file.mimetype);
+      const fileUrl = await this.storage.uploadBuffer(
+        key,
+        file.buffer,
+        file.mimetype,
+      );
       await this.prisma.attachment.create({
         data: {
           commentId,
@@ -757,7 +1091,10 @@ export class TicketsService {
 
   // AI suggestions are an internal triage aid, not a customer-facing fact — only
   // included for staff, mirroring how INTERNAL comments are already kept staff-only.
-  private toTicketSummary(ticket: Prisma.TicketGetPayload<{ include: typeof TICKET_LIST_INCLUDE }>, staff: boolean) {
+  private toTicketSummary(
+    ticket: Prisma.TicketGetPayload<{ include: typeof TICKET_LIST_INCLUDE }>,
+    staff: boolean,
+  ) {
     return {
       id: ticket.id,
       number: ticket.number,
@@ -786,7 +1123,9 @@ export class TicketsService {
     const staff = isStaff(user);
     const visibleComments = staff
       ? ticket.comments
-      : ticket.comments.filter((c) => c.visibility === CommentVisibility.PUBLIC);
+      : ticket.comments.filter(
+          (c) => c.visibility === CommentVisibility.PUBLIC,
+        );
 
     return {
       id: ticket.id,

@@ -40,7 +40,10 @@ export class AiService {
   ) {}
 
   /** AI assist must never break the feature it's attached to — log and degrade instead of throwing. */
-  private async safe<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
+  private async safe<T>(
+    label: string,
+    fn: () => Promise<T>,
+  ): Promise<T | null> {
     try {
       return await fn();
     } catch (error) {
@@ -51,11 +54,22 @@ export class AiService {
 
   private async getTicketContext(ticketId: string): Promise<TicketContext> {
     const [ticket, comments] = await Promise.all([
-      this.prisma.ticket.findUniqueOrThrow({ where: { id: ticketId }, select: { subject: true } }),
+      this.prisma.ticket.findUniqueOrThrow({
+        where: { id: ticketId },
+        select: { subject: true },
+      }),
       this.prisma.comment.findMany({
         where: { ticketId },
         orderBy: { createdAt: 'asc' },
-        include: { author: { select: { firstName: true, lastName: true, role: { select: { name: true } } } } },
+        include: {
+          author: {
+            select: {
+              firstName: true,
+              lastName: true,
+              role: { select: { name: true } },
+            },
+          },
+        },
       }),
     ]);
     return {
@@ -71,7 +85,9 @@ export class AiService {
 
   async summarizeTicket(ticketId: string): Promise<string | null> {
     const context = await this.getTicketContext(ticketId);
-    return this.safe('summarizeTicket', () => this.provider.summarizeTicket(context));
+    return this.safe('summarizeTicket', () =>
+      this.provider.summarizeTicket(context),
+    );
   }
 
   async suggestReply(ticketId: string): Promise<string | null> {
@@ -79,10 +95,20 @@ export class AiService {
     return this.safe('suggestReply', () => this.provider.suggestReply(context));
   }
 
-  async findDuplicates(organizationId: string, ticketId: string): Promise<DuplicateCandidateResult[]> {
+  async findDuplicates(
+    organizationId: string,
+    ticketId: string,
+  ): Promise<DuplicateCandidateResult[]> {
     const target = await this.prisma.ticket.findUniqueOrThrow({
       where: { id: ticketId },
-      select: { subject: true, comments: { orderBy: { createdAt: 'asc' }, take: 1, select: { body: true } } },
+      select: {
+        subject: true,
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          take: 1,
+          select: { body: true },
+        },
+      },
     });
 
     const pool = await this.prisma.ticket.findMany({
@@ -90,18 +116,34 @@ export class AiService {
         organizationId,
         id: { not: ticketId },
         mergedIntoId: null,
-        status: { in: [TicketStatus.OPEN, TicketStatus.PENDING, TicketStatus.ON_HOLD] },
+        status: {
+          in: [TicketStatus.OPEN, TicketStatus.PENDING, TicketStatus.ON_HOLD],
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: DUPLICATE_CANDIDATE_POOL_SIZE,
-      select: { id: true, number: true, subject: true, comments: { orderBy: { createdAt: 'asc' }, take: 1, select: { body: true } } },
+      select: {
+        id: true,
+        number: true,
+        subject: true,
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          take: 1,
+          select: { body: true },
+        },
+      },
     });
     if (pool.length === 0) return [];
 
     const result = await this.safe('findDuplicates', () =>
       this.provider.findDuplicates(
         { subject: target.subject, body: target.comments[0]?.body ?? '' },
-        pool.map((t) => ({ id: t.id, number: t.number, subject: t.subject, firstCommentBody: t.comments[0]?.body ?? '' })),
+        pool.map((t) => ({
+          id: t.id,
+          number: t.number,
+          subject: t.subject,
+          firstCommentBody: t.comments[0]?.body ?? '',
+        })),
       ),
     );
     if (!result) return [];
@@ -111,15 +153,31 @@ export class AiService {
       .map((d) => {
         const candidate = byId.get(d.ticketId);
         if (!candidate) return null;
-        return { ticketId: d.ticketId, ticketNumber: candidate.number, subject: candidate.subject, confidence: d.confidence, reasoning: d.reasoning };
+        return {
+          ticketId: d.ticketId,
+          ticketNumber: candidate.number,
+          subject: candidate.subject,
+          confidence: d.confidence,
+          reasoning: d.reasoning,
+        };
       })
       .filter((d): d is DuplicateCandidateResult => d !== null);
   }
 
-  async recommendKnowledgeArticles(organizationId: string, ticketId: string): Promise<ArticleRecommendationResult[]> {
+  async recommendKnowledgeArticles(
+    organizationId: string,
+    ticketId: string,
+  ): Promise<ArticleRecommendationResult[]> {
     const target = await this.prisma.ticket.findUniqueOrThrow({
       where: { id: ticketId },
-      select: { subject: true, comments: { orderBy: { createdAt: 'asc' }, take: 1, select: { body: true } } },
+      select: {
+        subject: true,
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          take: 1,
+          select: { body: true },
+        },
+      },
     });
 
     const pool = await this.prisma.knowledgeArticle.findMany({
@@ -143,7 +201,13 @@ export class AiService {
       .map((r) => {
         const article = byId.get(r.articleId);
         if (!article) return null;
-        return { articleId: r.articleId, title: article.title, slug: article.slug, confidence: r.confidence, reasoning: r.reasoning };
+        return {
+          articleId: r.articleId,
+          title: article.title,
+          slug: article.slug,
+          confidence: r.confidence,
+          reasoning: r.reasoning,
+        };
       })
       .filter((r): r is ArticleRecommendationResult => r !== null);
   }
@@ -155,7 +219,11 @@ export class AiService {
       select: {
         organizationId: true,
         subject: true,
-        comments: { orderBy: { createdAt: 'asc' }, take: 1, select: { body: true } },
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          take: 1,
+          select: { body: true },
+        },
         tags: { select: { tag: { select: { name: true } } } },
       },
     });
@@ -164,8 +232,16 @@ export class AiService {
     const existingTagNames = ticket.tags.map((t) => t.tag.name);
 
     const [prioritySuggestion, tagSuggestions] = await Promise.all([
-      this.safe('suggestPriority', () => this.provider.suggestPriority({ subject: ticket.subject, body })),
-      this.safe('suggestTags', () => this.provider.suggestTags({ subject: ticket.subject, body, existingTagNames })),
+      this.safe('suggestPriority', () =>
+        this.provider.suggestPriority({ subject: ticket.subject, body }),
+      ),
+      this.safe('suggestTags', () =>
+        this.provider.suggestTags({
+          subject: ticket.subject,
+          body,
+          existingTagNames,
+        }),
+      ),
     ]);
     if (!prioritySuggestion && !tagSuggestions) return;
 
@@ -177,22 +253,37 @@ export class AiService {
       },
     });
     this.realtime.emitToTicket(ticketId, 'ticket:updated', { ticketId });
-    this.realtime.emitToOrg(ticket.organizationId, 'ticket:updated', { ticketId });
+    this.realtime.emitToOrg(ticket.organizationId, 'ticket:updated', {
+      ticketId,
+    });
   }
 
   /** Queued right after a customer posts a PUBLIC comment — see TicketsService.addComment. */
   async analyzeCommentSentiment(commentId: string): Promise<void> {
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
-      select: { body: true, ticketId: true, ticket: { select: { organizationId: true } } },
+      select: {
+        body: true,
+        ticketId: true,
+        ticket: { select: { organizationId: true } },
+      },
     });
     if (!comment) return;
 
-    const sentiment = await this.safe('analyzeSentiment', () => this.provider.analyzeSentiment(comment.body));
+    const sentiment = await this.safe('analyzeSentiment', () =>
+      this.provider.analyzeSentiment(comment.body),
+    );
     if (!sentiment) return;
 
-    await this.prisma.comment.update({ where: { id: commentId }, data: { sentiment } });
-    this.realtime.emitToTicket(comment.ticketId, 'ticket:updated', { ticketId: comment.ticketId });
-    this.realtime.emitToOrg(comment.ticket.organizationId, 'ticket:updated', { ticketId: comment.ticketId });
+    await this.prisma.comment.update({
+      where: { id: commentId },
+      data: { sentiment },
+    });
+    this.realtime.emitToTicket(comment.ticketId, 'ticket:updated', {
+      ticketId: comment.ticketId,
+    });
+    this.realtime.emitToOrg(comment.ticket.organizationId, 'ticket:updated', {
+      ticketId: comment.ticketId,
+    });
   }
 }

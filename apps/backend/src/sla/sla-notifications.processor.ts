@@ -28,10 +28,25 @@ export class SlaNotificationsProcessor extends WorkerHost {
   }
 
   async process(job: Job<BreachJobData>) {
-    const { ticketId, organizationId, ticketNumber, subject, kind, assigneeEmail, assigneeFirstName } = job.data;
+    const {
+      ticketId,
+      organizationId,
+      ticketNumber,
+      subject,
+      kind,
+      assigneeEmail,
+      assigneeFirstName,
+    } = job.data;
 
     if (assigneeEmail && assigneeFirstName) {
-      await this.mail.sendSlaNotice(assigneeEmail, assigneeFirstName, ticketId, ticketNumber, subject, kind);
+      await this.mail.sendSlaNotice(
+        assigneeEmail,
+        assigneeFirstName,
+        ticketId,
+        ticketNumber,
+        subject,
+        kind,
+      );
       return;
     }
 
@@ -42,10 +57,19 @@ export class SlaNotificationsProcessor extends WorkerHost {
       select: { email: true, firstName: true },
     });
     for (const admin of admins) {
-      await this.mail.sendSlaNotice(admin.email, admin.firstName, ticketId, ticketNumber, subject, kind);
+      await this.mail.sendSlaNotice(
+        admin.email,
+        admin.firstName,
+        ticketId,
+        ticketNumber,
+        subject,
+        kind,
+      );
     }
     if (admins.length === 0) {
-      this.logger.warn(`No assignee or admin to notify for ticket #${ticketNumber} SLA ${kind} event`);
+      this.logger.warn(
+        `No assignee or admin to notify for ticket #${ticketNumber} SLA ${kind} event`,
+      );
     }
   }
 }

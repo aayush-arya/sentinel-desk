@@ -39,7 +39,12 @@ export class NotificationsService {
     return {
       items,
       unreadCount,
-      meta: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      },
     };
   }
 

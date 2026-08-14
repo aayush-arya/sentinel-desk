@@ -1,6 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { TicketPriority, TicketStatus } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateTicketDto {
   @ApiPropertyOptional()
@@ -17,7 +23,8 @@ export class UpdateTicketDto {
 
   @ApiPropertyOptional({
     enum: TicketStatus,
-    description: 'Staff only. To reopen a resolved/closed ticket, use POST /tickets/:id/reopen instead.',
+    description:
+      'Staff only. To reopen a resolved/closed ticket, use POST /tickets/:id/reopen instead.',
   })
   @IsOptional()
   @IsEnum(TicketStatus)

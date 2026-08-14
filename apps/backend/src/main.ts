@@ -43,9 +43,9 @@ async function bootstrap() {
 
   const port = config.get('port', { infer: true });
   await app.listen(port);
-  // eslint-disable-next-line no-console
+
   console.log(`SentinelDesk API running on http://localhost:${port}/api`);
-  // eslint-disable-next-line no-console
+
   console.log(`Swagger docs at http://localhost:${port}/api/docs`);
 }
 

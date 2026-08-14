@@ -44,7 +44,10 @@ export class UsersController {
   @RequireCsrf()
   @Patch('me')
   @ApiOperation({ summary: "Update the current user's profile" })
-  updateMe(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateProfileDto) {
+  updateMe(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateProfileDto,
+  ) {
     return this.usersService.updateProfile(user.id, dto);
   }
 
@@ -52,7 +55,9 @@ export class UsersController {
   @Post('me/avatar')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: "Upload the current user's avatar" })
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   uploadAvatar(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
@@ -67,9 +72,16 @@ export class UsersController {
     return this.usersService.listOrgMembers(user.organizationId);
   }
 
-  @Roles(RoleName.AGENT, RoleName.SENIOR_AGENT, RoleName.MANAGER, RoleName.ADMIN)
+  @Roles(
+    RoleName.AGENT,
+    RoleName.SENIOR_AGENT,
+    RoleName.MANAGER,
+    RoleName.ADMIN,
+  )
   @Get('assignable')
-  @ApiOperation({ summary: 'List active staff members tickets can be assigned to' })
+  @ApiOperation({
+    summary: 'List active staff members tickets can be assigned to',
+  })
   listAssignable(@CurrentUser() user: AuthenticatedUser) {
     return this.usersService.listAssignableAgents(user.organizationId);
   }
@@ -77,20 +89,35 @@ export class UsersController {
   @RequireCsrf()
   @RequirePermissions('user:invite')
   @Post('invite')
-  @ApiOperation({ summary: 'Invite a new staff member or customer to the organization' })
+  @ApiOperation({
+    summary: 'Invite a new staff member or customer to the organization',
+  })
   invite(@CurrentUser() user: AuthenticatedUser, @Body() dto: InviteUserDto) {
-    return this.usersService.inviteUser(user.id, user.organizationId, user.role, dto);
+    return this.usersService.inviteUser(
+      user.id,
+      user.organizationId,
+      user.role,
+      dto,
+    );
   }
 
   @RequireCsrf()
   @RequirePermissions('user:manage')
   @Patch(':id')
-  @ApiOperation({ summary: "Change a member's role or suspend/reactivate them" })
+  @ApiOperation({
+    summary: "Change a member's role or suspend/reactivate them",
+  })
   updateMember(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateMemberDto,
   ) {
-    return this.usersService.updateMember(user.id, user.role, user.organizationId, id, dto);
+    return this.usersService.updateMember(
+      user.id,
+      user.role,
+      user.organizationId,
+      id,
+      dto,
+    );
   }
 }

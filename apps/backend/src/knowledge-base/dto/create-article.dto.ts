@@ -1,6 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { KnowledgeArticleStatus } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateArticleDto {
   @ApiProperty()
@@ -14,7 +20,10 @@ export class CreateArticleDto {
   @MinLength(1)
   body!: string;
 
-  @ApiPropertyOptional({ enum: KnowledgeArticleStatus, default: KnowledgeArticleStatus.DRAFT })
+  @ApiPropertyOptional({
+    enum: KnowledgeArticleStatus,
+    default: KnowledgeArticleStatus.DRAFT,
+  })
   @IsOptional()
   @IsEnum(KnowledgeArticleStatus)
   status?: KnowledgeArticleStatus;

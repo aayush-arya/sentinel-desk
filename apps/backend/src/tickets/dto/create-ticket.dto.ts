@@ -17,7 +17,9 @@ export class CreateTicketDto {
   @MaxLength(200)
   subject!: string;
 
-  @ApiProperty({ example: 'I get an error every time I try to log in since this morning.' })
+  @ApiProperty({
+    example: 'I get an error every time I try to log in since this morning.',
+  })
   @IsString()
   @MinLength(1)
   body!: string;

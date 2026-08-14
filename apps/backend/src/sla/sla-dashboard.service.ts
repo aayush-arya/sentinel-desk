@@ -12,7 +12,10 @@ export class SlaDashboardService {
 
   async getSummary(organizationId: string) {
     const activeTickets = await this.prisma.ticket.findMany({
-      where: { organizationId, status: { notIn: [TicketStatus.RESOLVED, TicketStatus.CLOSED] } },
+      where: {
+        organizationId,
+        status: { notIn: [TicketStatus.RESOLVED, TicketStatus.CLOSED] },
+      },
       select: {
         createdAt: true,
         resolutionDueAt: true,
@@ -31,9 +34,13 @@ export class SlaDashboardService {
         continue;
       }
       if (ticket.resolutionDueAt) {
-        const totalMs = ticket.resolutionDueAt.getTime() - ticket.createdAt.getTime();
+        const totalMs =
+          ticket.resolutionDueAt.getTime() - ticket.createdAt.getTime();
         const elapsedMs = now - ticket.createdAt.getTime();
-        if (totalMs > 0 && (elapsedMs / totalMs) * 100 >= AT_RISK_THRESHOLD_PERCENT) {
+        if (
+          totalMs > 0 &&
+          (elapsedMs / totalMs) * 100 >= AT_RISK_THRESHOLD_PERCENT
+        ) {
           atRisk++;
           continue;
         }
@@ -41,14 +48,20 @@ export class SlaDashboardService {
       onTrack++;
     }
 
-    const windowStart = new Date(now - COMPLIANCE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const windowStart = new Date(
+      now - COMPLIANCE_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+    );
     const resolvedRecently = await this.prisma.ticket.findMany({
       where: { organizationId, resolvedAt: { gte: windowStart } },
       select: { resolutionBreached: true },
     });
-    const compliantCount = resolvedRecently.filter((t) => !t.resolutionBreached).length;
+    const compliantCount = resolvedRecently.filter(
+      (t) => !t.resolutionBreached,
+    ).length;
     const complianceRate =
-      resolvedRecently.length > 0 ? Math.round((compliantCount / resolvedRecently.length) * 100) : null;
+      resolvedRecently.length > 0
+        ? Math.round((compliantCount / resolvedRecently.length) * 100)
+        : null;
 
     return {
       totalActive: activeTickets.length,
@@ -85,7 +98,12 @@ export class SlaDashboardService {
 
     return {
       items,
-      meta: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      },
     };
   }
 }

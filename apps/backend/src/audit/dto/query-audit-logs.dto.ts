@@ -3,12 +3,16 @@ import { Transform } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class QueryAuditLogsDto {
-  @ApiPropertyOptional({ description: 'Filter by entity type, e.g. "Ticket", "User"' })
+  @ApiPropertyOptional({
+    description: 'Filter by entity type, e.g. "Ticket", "User"',
+  })
   @IsOptional()
   @IsString()
   entityType?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by action prefix, e.g. "ticket." or "auth.login"' })
+  @ApiPropertyOptional({
+    description: 'Filter by action prefix, e.g. "ticket." or "auth.login"',
+  })
   @IsOptional()
   @IsString()
   action?: string;

@@ -10,8 +10,12 @@ export class PresenceController {
   constructor(private readonly gateway: RealtimeGateway) {}
 
   @Get('presence')
-  @ApiOperation({ summary: 'Snapshot of currently-online user IDs in your organization' })
+  @ApiOperation({
+    summary: 'Snapshot of currently-online user IDs in your organization',
+  })
   getPresence(@CurrentUser() user: AuthenticatedUser) {
-    return { onlineUserIds: this.gateway.getOnlineUserIds(user.organizationId) };
+    return {
+      onlineUserIds: this.gateway.getOnlineUserIds(user.organizationId),
+    };
   }
 }

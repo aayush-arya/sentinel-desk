@@ -7,7 +7,10 @@ import {
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
@@ -20,9 +23,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (this as any).$on('warn', (e: unknown) => this.logger.warn(e));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     (this as any).$on('error', (e: unknown) => this.logger.error(e));
     await this.$connect();
   }

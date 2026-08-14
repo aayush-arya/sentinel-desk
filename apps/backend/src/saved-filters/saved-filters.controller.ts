@@ -1,4 +1,13 @@
-import { Controller, Body, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+  Controller,
+  Body,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SavedFiltersService } from './saved-filters.service';
 import { CreateSavedFilterDto } from './dto/create-saved-filter.dto';
@@ -12,7 +21,9 @@ export class SavedFiltersController {
   constructor(private readonly savedFilters: SavedFiltersService) {}
 
   @Get()
-  @ApiOperation({ summary: "List the current user's saved ticket filter views" })
+  @ApiOperation({
+    summary: "List the current user's saved ticket filter views",
+  })
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.savedFilters.findAll(user);
   }
@@ -20,7 +31,10 @@ export class SavedFiltersController {
   @RequireCsrf()
   @Post()
   @ApiOperation({ summary: 'Save (or overwrite) a named filter view' })
-  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateSavedFilterDto) {
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateSavedFilterDto,
+  ) {
     return this.savedFilters.create(user, dto);
   }
 
@@ -28,7 +42,10 @@ export class SavedFiltersController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a saved filter view' })
-  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  async remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     await this.savedFilters.remove(user, id);
   }
 }

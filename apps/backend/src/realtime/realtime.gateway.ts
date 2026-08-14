@@ -13,7 +13,10 @@ import { JwtService } from '@nestjs/jwt';
 import type { Server, Socket } from 'socket.io';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AppConfig } from '../config/configuration';
-import type { AuthenticatedUser, JwtAccessPayload } from '../auth/types/jwt-payload.type';
+import type {
+  AuthenticatedUser,
+  JwtAccessPayload,
+} from '../auth/types/jwt-payload.type';
 
 function parseCookies(header: string | undefined): Record<string, string> {
   const out: Record<string, string> = {};
@@ -37,9 +40,14 @@ interface AuthenticatedSocket extends Socket {
 // directly instead of going through ConfigService.
 @Injectable()
 @WebSocketGateway({
-  cors: { origin: process.env.FRONTEND_URL ?? 'http://localhost:3000', credentials: true },
+  cors: {
+    origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+    credentials: true,
+  },
 })
-export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class RealtimeGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server!: Server;
 
@@ -62,7 +70,9 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       const payload = await this.jwt.verifyAsync<JwtAccessPayload>(token, {
         secret: this.config.get('jwt', { infer: true }).accessSecret,
       });
-      const session = await this.prisma.session.findUnique({ where: { id: payload.sessionId } });
+      const session = await this.prisma.session.findUnique({
+        where: { id: payload.sessionId },
+      });
       if (!session || session.revokedAt || session.expiresAt < new Date()) {
         throw new Error('Session is no longer valid');
       }
@@ -104,7 +114,9 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     const wasOnline = current > 0;
     const isOnline = next > 0;
     if (wasOnline !== isOnline) {
-      this.server.to(`org:${organizationId}`).emit('presence:update', { userId, online: isOnline });
+      this.server
+        .to(`org:${organizationId}`)
+        .emit('presence:update', { userId, online: isOnline });
     }
   }
 
@@ -119,20 +131,28 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   ) {
     const user = client.data.user;
     if (!user || !data?.ticketId) return;
-    const ticket = await this.prisma.ticket.findUnique({ where: { id: data.ticketId } });
+    const ticket = await this.prisma.ticket.findUnique({
+      where: { id: data.ticketId },
+    });
     if (!ticket || ticket.organizationId !== user.organizationId) return;
     if (user.role === 'CUSTOMER' && ticket.requesterId !== user.id) return;
     await client.join(`ticket:${data.ticketId}`);
   }
 
   @SubscribeMessage('ticket:leave')
-  handleTicketLeave(@ConnectedSocket() client: AuthenticatedSocket, @MessageBody() data: { ticketId: string }) {
+  handleTicketLeave(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { ticketId: string },
+  ) {
     if (!data?.ticketId) return;
     client.leave(`ticket:${data.ticketId}`);
   }
 
   @SubscribeMessage('typing:start')
-  handleTypingStart(@ConnectedSocket() client: AuthenticatedSocket, @MessageBody() data: { ticketId: string }) {
+  handleTypingStart(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { ticketId: string },
+  ) {
     const user = client.data.user;
     if (!user || !data?.ticketId) return;
     client.to(`ticket:${data.ticketId}`).emit('ticket:typing', {
@@ -143,7 +163,10 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   @SubscribeMessage('typing:stop')
-  handleTypingStop(@ConnectedSocket() client: AuthenticatedSocket, @MessageBody() data: { ticketId: string }) {
+  handleTypingStop(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { ticketId: string },
+  ) {
     const user = client.data.user;
     if (!user || !data?.ticketId) return;
     client.to(`ticket:${data.ticketId}`).emit('ticket:typing', {

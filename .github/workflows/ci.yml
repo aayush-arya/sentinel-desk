@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Type-only - no database connection needed, just reads schema.prisma.
+      - name: Generate Prisma client
+        run: pnpm --filter @sentinel-desk/backend exec prisma generate
+
+      # Non-blocking: there's real pre-existing lint debt (mostly @typescript-eslint
+      # no-unsafe-* around Passport/Express's loosely-typed Request.user) that predates
+      # this workflow. Surfacing it here without failing the build until it's cleaned
+      # up is more honest than silently dropping the step or shipping CI red on day one.
+      - name: Lint
+        run: pnpm -r lint
+        continue-on-error: true
+
+      # `nest build` / `next build` both type-check as part of building.
+      - name: Build (typechecks every workspace)
+        run: pnpm -r build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000
+          NEXT_PUBLIC_WS_URL: ws://localhost:4000
+          NEXT_PUBLIC_APP_NAME: SentinelDesk
+
+      - name: Test
+        run: pnpm --filter @sentinel-desk/backend test

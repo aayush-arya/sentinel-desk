@@ -87,7 +87,8 @@ export default (): AppConfig => ({
     region: process.env.STORAGE_REGION ?? 'us-east-1',
   },
   ai: {
-    provider: (process.env.AI_PROVIDER as 'anthropic' | 'openai' | 'mock') ?? 'mock',
+    provider:
+      (process.env.AI_PROVIDER as 'anthropic' | 'openai' | 'mock') ?? 'mock',
     anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
     anthropicModel: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-5',
     openaiApiKey: process.env.OPENAI_API_KEY ?? '',

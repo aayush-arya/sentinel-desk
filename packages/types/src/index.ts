@@ -398,6 +398,37 @@ export interface KnowledgeArticle {
   author: KnowledgeArticleAuthor;
 }
 
+// ── Webhooks & API keys ───────────────────────────────────────────────
+
+export interface Webhook {
+  id: string;
+  url: string;
+  events: string[];
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface WebhookCreated extends Webhook {
+  organizationId: string;
+  secret: string;
+}
+
+export interface ApiKeySummary {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  lastUsedAt: string | null;
+  createdAt: string;
+  createdBy: { id: string; firstName: string; lastName: string };
+}
+
+export interface ApiKeyCreated {
+  id: string;
+  name: string;
+  key: string;
+  createdAt: string;
+}
+
 // ── Audit log ──────────────────────────────────────────────────────────
 
 export interface AuditLogEntry {

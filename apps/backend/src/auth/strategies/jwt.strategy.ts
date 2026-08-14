@@ -5,7 +5,10 @@ import { Strategy } from 'passport-jwt';
 import type { Request } from 'express';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AppConfig } from '../../config/configuration';
-import type { AuthenticatedUser, JwtAccessPayload } from '../types/jwt-payload.type';
+import type {
+  AuthenticatedUser,
+  JwtAccessPayload,
+} from '../types/jwt-payload.type';
 
 function extractFromCookie(req: Request): string | null {
   return req?.cookies?.sd_access ?? null;

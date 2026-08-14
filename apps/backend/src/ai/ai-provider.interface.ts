@@ -2,7 +2,12 @@ import type { CommentSentiment, TicketPriority } from '@prisma/client';
 
 export interface TicketContext {
   subject: string;
-  comments: { authorName: string; authorIsStaff: boolean; body: string; visibility: 'PUBLIC' | 'INTERNAL' }[];
+  comments: {
+    authorName: string;
+    authorIsStaff: boolean;
+    body: string;
+    visibility: 'PUBLIC' | 'INTERNAL';
+  }[];
 }
 
 export interface PrioritySuggestion {
@@ -47,9 +52,16 @@ export interface AiProvider {
 
   analyzeSentiment(text: string): Promise<CommentSentiment>;
 
-  suggestPriority(input: { subject: string; body: string }): Promise<PrioritySuggestion>;
+  suggestPriority(input: {
+    subject: string;
+    body: string;
+  }): Promise<PrioritySuggestion>;
 
-  suggestTags(input: { subject: string; body: string; existingTagNames: string[] }): Promise<string[]>;
+  suggestTags(input: {
+    subject: string;
+    body: string;
+    existingTagNames: string[];
+  }): Promise<string[]>;
 
   findDuplicates(
     target: { subject: string; body: string },

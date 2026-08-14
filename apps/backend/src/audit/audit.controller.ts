@@ -14,8 +14,14 @@ export class AuditController {
   constructor(private readonly audit: AuditService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Paginated, filterable audit trail for the organization (admin only)' })
-  findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: QueryAuditLogsDto) {
+  @ApiOperation({
+    summary:
+      'Paginated, filterable audit trail for the organization (admin only)',
+  })
+  findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: QueryAuditLogsDto,
+  ) {
     return this.audit.findAll(user.organizationId, query);
   }
 }

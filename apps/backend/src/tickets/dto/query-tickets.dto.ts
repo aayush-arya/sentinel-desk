@@ -1,7 +1,17 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { TicketPriority, TicketStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
-import { IsArray, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 
 const toArray = ({ value }: { value: unknown }) =>
   Array.isArray(value) ? value : value === undefined ? undefined : [value];
@@ -21,7 +31,10 @@ export class QueryTicketsDto {
   @IsEnum(TicketPriority, { each: true })
   priority?: TicketPriority[];
 
-  @ApiPropertyOptional({ description: 'Filter by assignee. Use "me" for the current user, "unassigned" for none.' })
+  @ApiPropertyOptional({
+    description:
+      'Filter by assignee. Use "me" for the current user, "unassigned" for none.',
+  })
   @IsOptional()
   @IsString()
   assignee?: string;
@@ -31,7 +44,9 @@ export class QueryTicketsDto {
   @IsUUID()
   tagId?: string;
 
-  @ApiPropertyOptional({ description: 'Full-text search over subject and comment bodies' })
+  @ApiPropertyOptional({
+    description: 'Full-text search over subject and comment bodies',
+  })
   @IsOptional()
   @IsString()
   search?: string;
@@ -51,7 +66,10 @@ export class QueryTicketsDto {
   @Max(100)
   pageSize?: number = 25;
 
-  @ApiPropertyOptional({ enum: ['createdAt', 'updatedAt', 'priority'], default: 'updatedAt' })
+  @ApiPropertyOptional({
+    enum: ['createdAt', 'updatedAt', 'priority'],
+    default: 'updatedAt',
+  })
   @IsOptional()
   @IsIn(['createdAt', 'updatedAt', 'priority'])
   sortBy?: 'createdAt' | 'updatedAt' | 'priority' = 'updatedAt';

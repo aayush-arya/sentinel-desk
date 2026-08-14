@@ -33,7 +33,10 @@ function button(url: string, label: string): string {
   return `<a href="${url}" style="display:inline-block;margin:20px 0;padding:12px 24px;background:#6366F1;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">${label}</a>`;
 }
 
-export function verifyEmailTemplate(firstName: string, verifyUrl: string): string {
+export function verifyEmailTemplate(
+  firstName: string,
+  verifyUrl: string,
+): string {
   return layout(
     'Verify your email to activate your SentinelDesk account.',
     `<h2 style="color:#111827;font-size:18px;margin:0 0 12px;">Verify your email</h2>
@@ -44,7 +47,10 @@ export function verifyEmailTemplate(firstName: string, verifyUrl: string): strin
   );
 }
 
-export function resetPasswordTemplate(firstName: string, resetUrl: string): string {
+export function resetPasswordTemplate(
+  firstName: string,
+  resetUrl: string,
+): string {
   return layout(
     'Reset your SentinelDesk password.',
     `<h2 style="color:#111827;font-size:18px;margin:0 0 12px;">Reset your password</h2>
@@ -70,7 +76,10 @@ export function inviteTemplate(
   );
 }
 
-const SLA_NOTICE_COPY: Record<'response' | 'resolution' | 'escalation', { heading: string; body: string }> = {
+const SLA_NOTICE_COPY: Record<
+  'response' | 'resolution' | 'escalation',
+  { heading: string; body: string }
+> = {
   response: {
     heading: 'Response SLA breached',
     body: 'has missed its first-response target and needs attention.',
