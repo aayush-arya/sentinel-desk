@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Columns3, Download, List as ListIcon, MessageSquare, Plus, Search } from 'lucide-react';
+import { CalendarDays, Columns3, Download, List as ListIcon, MessageSquare, Plus, Search } from 'lucide-react';
 import type { TicketPriority, TicketStatus } from '@sentinel-desk/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTickets } from '@/hooks/use-tickets';
@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-badges';
 import { KanbanBoard } from '@/components/tickets/kanban-board';
+import { CalendarView } from '@/components/tickets/calendar-view';
 import { SavedFiltersMenu, type TicketFilterState } from '@/components/tickets/saved-filters-menu';
 import { API_BASE_URL } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
@@ -49,7 +50,7 @@ function TicketsPageContent() {
   const searchParams = useSearchParams();
   const { data: user } = useCurrentUser();
   const [search, setSearch] = useState(searchParams.get('search') ?? '');
-  const [view, setView] = useState<'list' | 'board'>('list');
+  const [view, setView] = useState<'list' | 'board' | 'calendar'>('list');
 
   const status = searchParams.get('status') as TicketStatus | null;
   const priority = searchParams.get('priority') as TicketPriority | null;
@@ -190,12 +191,25 @@ function TicketsPageContent() {
               <Columns3 className="size-3.5" />
               Board
             </button>
+            <button
+              type="button"
+              onClick={() => setView('calendar')}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                view === 'calendar' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <CalendarDays className="size-3.5" />
+              Calendar
+            </button>
           </div>
         )}
       </div>
 
       {staff && view === 'board' ? (
         <KanbanBoard filters={{ priority: priority ? [priority] : undefined, assignee, search: search || undefined }} />
+      ) : staff && view === 'calendar' ? (
+        <CalendarView filters={{ priority: priority ? [priority] : undefined, assignee, search: search || undefined }} />
       ) : (
       <Card className="overflow-hidden">
         {isLoading ? (
