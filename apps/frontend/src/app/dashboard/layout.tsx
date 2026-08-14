@@ -8,6 +8,7 @@ import { DashboardSidebar } from '@/components/dashboard/sidebar';
 import { DashboardTopbar } from '@/components/dashboard/topbar';
 import { CommandPalette } from '@/components/command-palette';
 import { OrgTheme } from '@/components/dashboard/org-theme';
+import { PageTransition } from '@/components/dashboard/page-transition';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -31,7 +32,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <DashboardSidebar user={user} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <DashboardTopbar user={user} />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          <PageTransition>{children}</PageTransition>
+        </main>
       </div>
       <CommandPalette />
     </div>

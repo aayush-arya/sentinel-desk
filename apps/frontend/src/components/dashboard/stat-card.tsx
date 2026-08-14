@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AnimatedNumber } from '@/components/dashboard/animated-number';
 import { cn } from '@/lib/utils';
 
 interface StatCardProps {
@@ -25,7 +26,9 @@ export function StatCard({ label, value, icon: Icon, iconClassName, loading, hre
         {loading ? (
           <Skeleton className="h-8 w-14" />
         ) : (
-          <span className="text-2xl font-semibold">{value}</span>
+          <span className="text-2xl font-semibold">
+            {typeof value === 'number' ? <AnimatedNumber value={value} /> : value}
+          </span>
         )}
         {hint && !loading && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       </CardContent>

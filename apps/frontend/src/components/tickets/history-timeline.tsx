@@ -52,10 +52,14 @@ function describeMetadata(action: string, metadata: Record<string, unknown>): st
 export function HistoryTimeline({ entries }: { entries: TicketHistoryEntry[] }) {
   return (
     <ol className="space-y-3">
-      {entries.map((entry) => {
+      {entries.map((entry, i) => {
         const detail = describeMetadata(entry.action, entry.metadata);
         return (
-          <li key={entry.id} className="flex gap-3 text-sm">
+          <li
+            key={entry.id}
+            style={{ animationDelay: `${Math.min(i, 8) * 30}ms`, animationFillMode: 'backwards' }}
+            className="flex gap-3 text-sm animate-in fade-in-0 duration-200"
+          >
             <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-muted-foreground" />
             <div>
               <p>

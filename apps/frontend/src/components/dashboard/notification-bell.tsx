@@ -25,14 +25,19 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-function NotificationRow({ notification }: { notification: AppNotification }) {
+function NotificationRow({ notification, index }: { notification: AppNotification; index: number }) {
   const markRead = useMarkNotificationRead();
   const unread = !notification.readAt;
 
   const content = (
     <div
+      // CSS-driven stagger (tw-animate-css's animate-in, not framer-motion) —
+      // reliably fires regardless of the animation engine backing it, and a
+      // fresh notification list is exactly the "communicates new state" case
+      // this kind of subtle entrance is for.
+      style={{ animationDelay: `${Math.min(index, 8) * 40}ms`, animationFillMode: 'backwards' }}
       className={cn(
-        'flex flex-col gap-0.5 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted/60',
+        'flex flex-col gap-0.5 rounded-lg px-3 py-2 text-sm transition-colors animate-in fade-in-0 slide-in-from-top-1 duration-200 hover:bg-muted/60',
         unread && 'bg-primary/5',
       )}
       onClick={() => unread && markRead.mutate(notification.id)}
@@ -87,8 +92,8 @@ export function NotificationBell() {
         <ScrollArea className="max-h-80">
           {data && data.items.length > 0 ? (
             <div className="space-y-0.5">
-              {data.items.map((n) => (
-                <NotificationRow key={n.id} notification={n} />
+              {data.items.map((n, i) => (
+                <NotificationRow key={n.id} notification={n} index={i} />
               ))}
             </div>
           ) : (
