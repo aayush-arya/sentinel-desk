@@ -154,7 +154,7 @@ export function CalendarView({ filters }: { filters: Omit<TicketFilters, 'status
                       key={ticket.id}
                       href={`/dashboard/tickets/${ticket.id}`}
                       className={cn(
-                        'flex items-center gap-1 truncate rounded px-1 py-0.5 text-[11px] font-medium hover:opacity-80',
+                        'flex items-center gap-1 truncate rounded px-1 py-0.5 text-[11px] font-medium transition-[transform,opacity] duration-150 hover:scale-[1.03] hover:opacity-80',
                         TONE_CHIP[tone],
                       )}
                       title={ticket.subject}

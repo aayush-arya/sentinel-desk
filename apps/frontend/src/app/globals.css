@@ -180,6 +180,24 @@
     -webkit-backdrop-filter: blur(10px) saturate(140%);
   }
 
+  /* Opt-in hover treatment for cards that are genuinely clickable (stat cards,
+     kanban cards, list rows rendered as cards) — not applied to Card by default,
+     since most cards in this app are static containers, not affordances. */
+  .card-interactive {
+    transition:
+      transform 150ms ease-out,
+      box-shadow 150ms ease-out,
+      border-color 150ms ease-out,
+      opacity 150ms ease-out;
+  }
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -12px oklch(0 0 0 / 18%);
+  }
+  .dark .card-interactive:hover {
+    box-shadow: 0 8px 24px -12px oklch(0 0 0 / 40%);
+  }
+
   /* Combined with bg-muted on the same element (see ui/skeleton.tsx) — the gradient
      paints a soft highlight band over the muted base color and sweeps across it.
      The highlight stop is a low-alpha mix of --foreground, not a full color, so

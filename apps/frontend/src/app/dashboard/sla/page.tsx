@@ -120,7 +120,7 @@ export default function SlaDashboardPage() {
                 <Link
                   key={ticket.id}
                   href={`/dashboard/tickets/${ticket.id}`}
-                  className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50"
+                  className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
                 >
                   <span className="w-10 shrink-0 text-xs text-muted-foreground">#{ticket.number}</span>
                   <div className="min-w-0 flex-1">

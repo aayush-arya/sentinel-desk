@@ -37,7 +37,7 @@ function KanbanCard({ ticket }: { ticket: TicketSummary }) {
       ref={dragRef as unknown as React.Ref<HTMLAnchorElement>}
       href={`/dashboard/tickets/${ticket.id}`}
       className={cn(
-        'block cursor-grab space-y-2 rounded-lg border border-border bg-card p-3 text-sm shadow-sm transition-opacity hover:border-primary/40 active:cursor-grabbing',
+        'card-interactive block cursor-grab space-y-2 rounded-lg border border-border bg-card p-3 text-sm shadow-sm hover:border-primary/40 active:cursor-grabbing',
         isDragging && 'opacity-40',
       )}
     >

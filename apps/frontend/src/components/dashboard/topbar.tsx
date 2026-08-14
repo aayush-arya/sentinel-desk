@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationBell } from '@/components/dashboard/notification-bell';
+import { MobileSidebar } from '@/components/dashboard/mobile-sidebar';
 import { useLogout } from '@/hooks/use-auth';
 import { useUIStore } from '@/store/ui-store';
 
@@ -36,6 +37,7 @@ export function DashboardTopbar({ user }: { user: UserProfile }) {
   return (
     <header className="glass-chrome relative z-20 flex h-14 shrink-0 items-center justify-between border-b border-border/60 px-4 md:px-6">
       <div className="flex items-center gap-2">
+        <MobileSidebar user={user} />
         <Badge variant="secondary" className="font-normal">
           {user.role.label}
         </Badge>
@@ -54,7 +56,10 @@ export function DashboardTopbar({ user }: { user: UserProfile }) {
         <NotificationBell />
         <ThemeToggle />
         <DropdownMenu>
-          <DropdownMenuTrigger className="ml-1 rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring">
+          <DropdownMenuTrigger
+            className="ml-1 rounded-full outline-none ring-offset-background transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Account menu for ${user.firstName} ${user.lastName}`}
+          >
             <Avatar className="size-8">
               {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.firstName} />}
               <AvatarFallback>{initials(user)}</AvatarFallback>

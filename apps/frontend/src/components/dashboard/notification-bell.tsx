@@ -59,7 +59,12 @@ export function NotificationBell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative size-8">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative size-8"
+          aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
+        >
           <Bell className="size-4" />
           {unreadCount > 0 && (
             <Badge className="absolute -right-1 -top-1 h-4 min-w-4 justify-center rounded-full px-1 text-[10px]">

@@ -2,39 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, BookOpen, Gauge, LayoutGrid, MessageSquare, MessagesSquare, Monitor, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { UserProfile } from '@sentinel-desk/types';
 import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { canManageTeam, canViewSlaDashboard } from '@/lib/rbac';
+import { getNavItems } from '@/lib/dashboard-nav';
 import { useUIStore } from '@/store/ui-store';
-
-interface NavItem {
-  href: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-function getNavItems(user: UserProfile): NavItem[] {
-  const items: NavItem[] = [
-    { href: '/dashboard', label: 'Overview', icon: LayoutGrid },
-    { href: '/dashboard/tickets', label: 'Tickets', icon: MessageSquare },
-    { href: '/dashboard/knowledge-base', label: 'Knowledge base', icon: BookOpen },
-    { href: '/dashboard/sessions', label: 'Sessions', icon: Monitor },
-  ];
-  if (user.role.name !== 'CUSTOMER') {
-    items.splice(3, 0, { href: '/dashboard/macros', label: 'Saved replies', icon: MessagesSquare });
-  }
-  if (canViewSlaDashboard(user.role.name)) {
-    items.splice(2, 0, { href: '/dashboard/sla', label: 'SLA', icon: Gauge });
-    items.splice(2, 0, { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 });
-  }
-  if (canManageTeam(user.role.name)) {
-    items.splice(2, 0, { href: '/dashboard/team', label: 'Team', icon: Users });
-  }
-  return items;
-}
 
 export function DashboardSidebar({ user }: { user: UserProfile }) {
   const pathname = usePathname();
@@ -71,16 +46,32 @@ export function DashboardSidebar({ user }: { user: UserProfile }) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                active
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                  : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
+                'relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                active ? 'text-sidebar-accent-foreground' : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
                 collapsed && 'justify-center px-2',
               )}
               title={collapsed ? item.label : undefined}
             >
-              <item.icon className="size-4 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
+              {active && (
+                <motion.span
+                  layoutId="sidebar-active-pill"
+                  className="absolute inset-0 rounded-lg bg-sidebar-accent"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              <item.icon className="relative z-10 size-4 shrink-0" />
+              {/* Plain CSS transition rather than framer-motion here: collapse is a
+                  binary toggle between two known states, and max-width + opacity
+                  gives the same smooth reveal/hide without needing JS to measure
+                  the label's natural width. */}
+              <span
+                className={cn(
+                  'relative z-10 overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-150',
+                  collapsed ? 'max-w-0 opacity-0' : 'max-w-40 opacity-100',
+                )}
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}

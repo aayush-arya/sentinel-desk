@@ -16,7 +16,7 @@ interface StatCardProps {
 
 export function StatCard({ label, value, icon: Icon, iconClassName, loading, href, hint }: StatCardProps) {
   const content = (
-    <Card className={cn(href && 'transition-colors hover:bg-muted/40')}>
+    <Card className={cn(href && 'card-interactive hover:ring-primary/30')}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
         <Icon className={cn('size-4 text-muted-foreground', iconClassName)} />
