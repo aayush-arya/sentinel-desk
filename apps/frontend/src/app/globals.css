@@ -166,8 +166,14 @@
   .glass-panel {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    backdrop-filter: blur(16px) saturate(160%);
+    /* Order matters: the build's CSS minifier (Lightning CSS) collapses this
+       prefixed/unprefixed pair down to just one declaration rather than
+       keeping both — and it keeps whichever is declared last. Standard
+       property last so evergreen Chrome/Firefox (which don't recognize
+       -webkit-backdrop-filter at all) actually get the blur; only older
+       Safari relies on the prefix, and loses this one property gracefully. */
     -webkit-backdrop-filter: blur(16px) saturate(160%);
+    backdrop-filter: blur(16px) saturate(160%);
   }
 
   /* Lighter-touch translucency for persistent chrome (sidebar/topbar) that's on
@@ -176,8 +182,8 @@
      read through faintly. */
   .glass-chrome {
     background: color-mix(in oklch, var(--background-elevated) 75%, transparent);
-    backdrop-filter: blur(10px) saturate(140%);
     -webkit-backdrop-filter: blur(10px) saturate(140%);
+    backdrop-filter: blur(10px) saturate(140%);
   }
 
   /* Opt-in hover treatment for cards that are genuinely clickable (stat cards,
