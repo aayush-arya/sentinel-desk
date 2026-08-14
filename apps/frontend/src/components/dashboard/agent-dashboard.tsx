@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { AlertTriangle, CalendarClock, CheckCircle2, Inbox, ListTodo } from 'lucide-react';
+import { AlertTriangle, CalendarClock, CheckCircle2, Inbox, ListTodo, Timer } from 'lucide-react';
 import type { TicketSummary, UserProfile } from '@sentinel-desk/types';
 import { useTickets } from '@/hooks/use-tickets';
 import { useSlaDashboard } from '@/hooks/use-sla';
@@ -154,6 +154,18 @@ export function AgentDashboard({ user }: { user: UserProfile }) {
                   </Link>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">SLA simulator</CardTitle>
+              <Timer className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <Link href="/dashboard/sla/simulator" className="text-xs text-primary hover:underline">
+                Preview due dates for a hypothetical ticket
+              </Link>
             </CardContent>
           </Card>
 

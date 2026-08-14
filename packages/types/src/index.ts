@@ -297,6 +297,14 @@ export interface SlaPolicy {
   updatedAt: string;
 }
 
+export interface SlaSimulationResult {
+  policyName: string | null;
+  responseTargetMinutes: number | null;
+  resolutionTargetMinutes: number | null;
+  responseDueAt: string | null;
+  resolutionDueAt: string | null;
+}
+
 export interface SlaDashboardSummary {
   totalActive: number;
   onTrack: number;

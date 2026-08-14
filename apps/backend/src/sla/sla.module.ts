@@ -6,6 +6,7 @@ import { SlaPoliciesController } from './sla-policies.controller';
 import { SlaPoliciesService } from './sla-policies.service';
 import { SlaDashboardController } from './sla-dashboard.controller';
 import { SlaDashboardService } from './sla-dashboard.service';
+import { SlaSimulatorController } from './sla-simulator.controller';
 import { SlaBreachCheckService } from './sla-breach-check.service';
 import { SlaNotificationsProcessor } from './sla-notifications.processor';
 import { SlaService } from './sla.service';
@@ -23,6 +24,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     BusinessHoursController,
     SlaPoliciesController,
     SlaDashboardController,
+    SlaSimulatorController,
   ],
   providers: [
     BusinessHoursService,

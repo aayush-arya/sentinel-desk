@@ -120,6 +120,58 @@ export class SlaService {
     return update;
   }
 
+  /** Hypothetical due-date preview for the SLA simulator — same math as ticket creation, without persisting anything. */
+  async simulate(
+    organizationId: string,
+    priority: TicketPriority,
+    from: Date = new Date(),
+  ) {
+    const policy = await this.prisma.slaPolicy.findFirst({
+      where: { organizationId, isDefault: true },
+      include: {
+        rules: true,
+        businessHours: { include: { slots: true, holidays: true } },
+      },
+    });
+    if (!policy) {
+      return {
+        policyName: null,
+        responseTargetMinutes: null,
+        resolutionTargetMinutes: null,
+        responseDueAt: null,
+        resolutionDueAt: null,
+      };
+    }
+
+    const rule = policy.rules.find((r) => r.priority === priority);
+    if (!rule) {
+      return {
+        policyName: policy.name,
+        responseTargetMinutes: null,
+        resolutionTargetMinutes: null,
+        responseDueAt: null,
+        resolutionDueAt: null,
+      };
+    }
+
+    const config = toBusinessHoursConfig(policy.businessHours);
+    return {
+      policyName: policy.name,
+      responseTargetMinutes: rule.responseTargetMinutes,
+      resolutionTargetMinutes: rule.resolutionTargetMinutes,
+      responseDueAt: addBusinessMinutes(
+        from,
+        rule.responseTargetMinutes,
+        config,
+      ),
+      resolutionDueAt: addBusinessMinutes(
+        from,
+        rule.resolutionTargetMinutes,
+        config,
+      ),
+    };
+  }
+
   /** Stops the SLA clock — called when a ticket moves to PENDING or ON_HOLD. */
   async pause(ticketId: string, actorId: string) {
     const ticket = await this.prisma.ticket.findUniqueOrThrow({

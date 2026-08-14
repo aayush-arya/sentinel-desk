@@ -4,7 +4,9 @@ import type {
   PaginatedResult,
   SlaDashboardSummary,
   SlaPolicy,
+  SlaSimulationResult,
   SlaViolationTicket,
+  TicketPriority,
 } from '@sentinel-desk/types';
 import { apiClient } from '@/lib/api-client';
 
@@ -66,6 +68,17 @@ export function useCreateSlaPolicy() {
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sla', 'policies'] }),
+  });
+}
+
+export function useSimulateSla() {
+  return useMutation({
+    mutationFn: async (payload: { priority: TicketPriority; from?: string }) => {
+      const { data } = await apiClient.get<SlaSimulationResult>('/sla/simulate', {
+        params: payload,
+      });
+      return data;
+    },
   });
 }
 

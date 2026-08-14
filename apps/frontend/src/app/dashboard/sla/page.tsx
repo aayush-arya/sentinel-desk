@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, Gauge, Settings, TrendingUp } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Gauge, Settings, Timer, TrendingUp } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useSlaDashboard, useSlaViolations } from '@/hooks/use-sla';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,14 +34,22 @@ export default function SlaDashboardPage() {
           <h1 className="text-2xl font-semibold tracking-tight">SLA Dashboard</h1>
           <p className="text-sm text-muted-foreground">Real-time compliance across all active tickets.</p>
         </div>
-        {(user.role.name === 'ADMIN' || user.role.name === 'MANAGER') && (
+        <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/sla/settings">
-              <Settings className="size-3.5" />
-              Configure
+            <Link href="/dashboard/sla/simulator">
+              <Timer className="size-3.5" />
+              Simulator
             </Link>
           </Button>
-        )}
+          {(user.role.name === 'ADMIN' || user.role.name === 'MANAGER') && (
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard/sla/settings">
+                <Settings className="size-3.5" />
+                Configure
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
