@@ -7,9 +7,13 @@ Built as a from-scratch, production-oriented monorepo: NestJS + Prisma + Postgre
 backend, Next.js 15 + React 19 + Tailwind v4 + shadcn/ui on the frontend, with real multi-tenant
 auth, RBAC, and audit logging already in place.
 
-> **Status:** actively under construction, milestone by milestone. See [Roadmap](#roadmap) for
-> what's live today versus what's next. Nothing described as "done" below is a stub — it's
-> implemented, migrated, and has been exercised end-to-end.
+**Live:** frontend on Vercel, API on Render. See [docs/deployment.md](docs/deployment.md) for
+how. Demo accounts below work end to end on the live deployment, not just locally.
+
+> **Status:** feature-complete against the original spec — every item in
+> [What's implemented today](#whats-implemented-today) is real, migrated, and has been
+> exercised end-to-end, not a stub. See [docs/](docs/) for architecture, ER diagram, and
+> deployment details.
 
 ## Tech stack
 
@@ -98,40 +102,37 @@ all using the password `Password123!`:
   reuse detection, "remember me", multi-session listing, per-session revoke, revoke-all-others.
 - **RBAC**: five roles (Customer, Support Agent, Senior Agent, Manager, Admin) enforced by
   role guards and a real Role/Permission/RolePermission schema — not just an enum check.
-- **Security**: Helmet, per-route rate limiting, double-submit CSRF on cookie-authenticated
-  mutations, bcrypt password hashing, hashed-at-rest verification/reset/invite tokens, audit
-  logging of security-relevant events.
-- **Profile & avatar**: profile editing, avatar upload to MinIO (S3-compatible).
+- **Security**: Helmet, per-route rate limiting, CSRF protection that survives a cross-origin
+  frontend/backend split (see [docs/architecture.md](docs/architecture.md#csrf-across-origins)),
+  bcrypt password hashing, hashed-at-rest verification/reset/invite tokens/API keys, org-wide
+  audit logging of security- and ticket-relevant events.
+- **Profile & avatar**: profile editing, avatar upload to S3-compatible storage.
 - **Team management**: invite members, change role/status, suspend/reactivate — all
   permission-gated server-side, not just hidden in the UI.
-- **Frontend**: branded marketing page, full auth flow UI, dashboard shell with role-aware
-  navigation, light/dark theming, all wired to the real API (no mock data).
+- **Role-specific dashboards**: distinct Customer / Agent / Manager / Admin dashboard content,
+  each surfacing the metrics and quick actions relevant to that role, backed by real Recharts
+  analytics (ticket volume, SLA compliance, CSAT trends) with CSV/PDF export.
 - **Ticket system**: create/edit/reply/reopen, file attachments, assignment & transfer, private
-  internal notes, merge & split, escalation, tags, full per-ticket history timeline.
+  internal notes, merge & split, escalation, tags, watchers (opt-in notifications on tickets
+  you don't own), full per-ticket history timeline, list/kanban board/calendar views, saved
+  filters, CSAT rating, saved-reply macros.
 - **SLA engine**: timezone-aware business hours + holiday calendar, per-priority response/
   resolution targets, pause/resume, automatic breach detection (cron sweep), automatic
-  escalation, SLA compliance dashboard, violation reports.
+  escalation, SLA compliance dashboard, violation reports, and a simulator to preview due
+  dates for a hypothetical ticket before it exists.
 - **Realtime layer**: Socket.IO gateway (cookie-JWT authenticated) driving live ticket updates,
   typing indicators, presence, and notification delivery.
 - **AI features**: ticket summarization, suggested replies, sentiment detection, priority
-  suggestion, duplicate detection, and tag suggestion, behind a swappable provider interface.
+  suggestion, duplicate detection, and knowledge-base article recommendation, behind a
+  swappable provider interface (Anthropic today, mock for tests/offline dev).
+- **Knowledge base**: article CRUD with a draft/published workflow, AI-backed "suggest
+  relevant articles" on a ticket.
+- **Command palette** (⌘K / Ctrl+K): jump to any ticket, page, or action without the mouse.
+- **Extensibility**: outbound webhooks (HMAC-signed) on ticket lifecycle events, public API
+  keys as an alternate auth path for programmatic access, organization branding (name/logo/
+  primary color) reflected live across the UI.
+- **DevOps**: multi-stage Dockerfiles for both apps, GitHub Actions CI (typecheck/build/test
+  gate; lint non-blocking), deployed live end to end (Vercel + Render + managed Postgres/Redis).
 
-## Roadmap
-
-- [x] Monorepo scaffold, Docker infra, CI-ready tooling
-- [x] Multi-tenant auth, RBAC, sessions, audit logging
-- [x] Frontend auth UI + dashboard shell
-- [x] Ticket system: CRUD, comments, attachments, assignment, merge/split, escalation
-- [x] SLA engine: business hours, holiday calendar, breach detection, auto-escalation
-- [x] Realtime layer: Socket.IO presence, typing indicators, live updates
-- [x] AI features: summarization, suggested replies, sentiment, priority, duplicate detection
-- [ ] Role-specific dashboards (Customer / Agent / Manager / Admin) with real analytics — one
-      generic dashboard exists today; Recharts is installed but not yet wired up
-- [ ] Command palette (Ctrl+K) and kanban board — `cmdk` and `react-dnd` are installed
-      dependencies, not yet implemented
-- [ ] Knowledge base module (article CRUD + AI recommendations)
-- [ ] Global full-text search, saved filters, CSAT, saved-reply macros
-- [ ] CSV/PDF export, webhooks, API keys, public REST API
-- [ ] Audit log coverage for ticket actions (currently only in per-ticket history, not the
-      org-wide audit log)
-- [ ] Dockerfiles for containerized deploys, GitHub Actions CI, architecture & ER diagrams
+Full breakdown of how these fit together: [docs/architecture.md](docs/architecture.md) ·
+[docs/database.md](docs/database.md) (ER diagram) · [docs/deployment.md](docs/deployment.md).
