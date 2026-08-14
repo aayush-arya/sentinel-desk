@@ -23,6 +23,7 @@ import { MacrosModule } from './macros/macros.module';
 import { SavedFiltersModule } from './saved-filters/saved-filters.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
+import { OrganizationModule } from './organization/organization.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -80,6 +81,7 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
     SavedFiltersModule,
     WebhooksModule,
     ApiKeysModule,
+    OrganizationModule,
     HealthModule,
   ],
   providers: [

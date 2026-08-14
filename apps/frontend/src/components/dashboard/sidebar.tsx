@@ -50,7 +50,7 @@ export function DashboardSidebar({ user }: { user: UserProfile }) {
       )}
     >
       <div className="flex h-14 items-center justify-between border-b border-border px-4">
-        {!collapsed && <BrandLogo />}
+        {!collapsed && <BrandLogo logoUrl={user.organization.logoUrl} />}
         <Button
           variant="ghost"
           size="icon"

@@ -7,6 +7,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { DashboardSidebar } from '@/components/dashboard/sidebar';
 import { DashboardTopbar } from '@/components/dashboard/topbar';
 import { CommandPalette } from '@/components/command-palette';
+import { OrgTheme } from '@/components/dashboard/org-theme';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen overflow-hidden">
+      <OrgTheme primaryColor={user.organization.primaryColor} />
       <DashboardSidebar user={user} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <DashboardTopbar user={user} />

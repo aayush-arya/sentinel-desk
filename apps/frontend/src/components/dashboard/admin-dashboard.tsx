@@ -173,6 +173,12 @@ export function AdminDashboard({ user }: { user: UserProfile }) {
           >
             <KeyRound className="size-3.5" /> API keys
           </Link>
+          <Link
+            href="/dashboard/settings/organization"
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50"
+          >
+            <Building2 className="size-3.5" /> Branding
+          </Link>
         </CardContent>
       </Card>
     </div>
