@@ -226,6 +226,19 @@ export function useSplitTicket(ticketId: string) {
   });
 }
 
+export function useToggleWatch(ticketId: string) {
+  const invalidate = useInvalidateTicket(ticketId);
+  return useMutation({
+    mutationFn: async (watching: boolean) => {
+      const { data } = watching
+        ? await apiClient.post<TicketDetail>(`/tickets/${ticketId}/watch`)
+        : await apiClient.delete<TicketDetail>(`/tickets/${ticketId}/watch`);
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
 export function useTicketTags(ticketId: string) {
   const invalidate = useInvalidateTicket(ticketId);
   const add = useMutation({

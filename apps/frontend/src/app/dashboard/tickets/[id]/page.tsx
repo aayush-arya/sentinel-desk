@@ -4,11 +4,18 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Copy, Loader2, Pencil, RotateCcw, Sparkles, X } from 'lucide-react';
+import { BookOpen, Copy, Eye, EyeOff, Loader2, Pencil, RotateCcw, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TicketComment, TicketCommentNewEvent, TicketDetail, TicketTypingEvent } from '@sentinel-desk/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { useTicket, useTicketHistory, useUpdateTicket, useReopenTicket, TICKET_KEY } from '@/hooks/use-tickets';
+import {
+  useTicket,
+  useTicketHistory,
+  useUpdateTicket,
+  useReopenTicket,
+  useToggleWatch,
+  TICKET_KEY,
+} from '@/hooks/use-tickets';
 import { useTicketSummary, useDuplicateCandidates, useKbSuggestions } from '@/hooks/use-ai';
 import { useRealtime } from '@/lib/realtime-context';
 import { Card } from '@/components/ui/card';
@@ -38,6 +45,7 @@ export default function TicketDetailPage() {
   const { data: history } = useTicketHistory(params.id);
   const updateTicket = useUpdateTicket(params.id);
   const reopenTicket = useReopenTicket(params.id);
+  const toggleWatch = useToggleWatch(params.id);
   const summarize = useTicketSummary(params.id);
   const duplicates = useDuplicateCandidates(params.id);
   const kbSuggestions = useKbSuggestions(params.id);
@@ -183,6 +191,15 @@ export default function TicketDetailPage() {
     }
   };
 
+  const handleToggleWatch = async () => {
+    try {
+      await toggleWatch.mutateAsync(!ticket.isWatching);
+      toast.success(ticket.isWatching ? 'Stopped watching ticket' : 'Watching ticket');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Unable to update watch status'));
+    }
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
       <div className="space-y-4">
@@ -225,6 +242,22 @@ export default function TicketDetailPage() {
             {ticket.reopenedCount > 0 && (
               <span className="text-xs text-muted-foreground">Reopened {ticket.reopenedCount}x</span>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-xs text-muted-foreground"
+              onClick={handleToggleWatch}
+              disabled={toggleWatch.isPending}
+            >
+              {toggleWatch.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : ticket.isWatching ? (
+                <Eye className="size-3.5 text-primary" />
+              ) : (
+                <EyeOff className="size-3.5" />
+              )}
+              {ticket.isWatching ? 'Watching' : 'Watch'}
+            </Button>
           </div>
         </div>
 

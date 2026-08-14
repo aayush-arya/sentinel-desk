@@ -137,6 +137,7 @@ model User {
   macros                  Macro[]
   savedFilters            SavedFilter[]
   apiKeysCreated          ApiKey[]
+  watchedTickets          TicketWatcher[]
 
   @@index([organizationId])
   @@map("users")
@@ -331,6 +332,7 @@ model Ticket {
   tags          TicketTag[]
   history       TicketHistory[]
   notifications Notification[]
+  watchers      TicketWatcher[]
 
   @@unique([organizationId, number])
   @@index([organizationId, status])
@@ -433,6 +435,18 @@ enum TicketHistoryAction {
   RESPONSE_SLA_BREACHED
   RESOLUTION_SLA_BREACHED
   AUTO_ESCALATED
+}
+
+model TicketWatcher {
+  ticketId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([ticketId, userId])
+  @@map("ticket_watchers")
 }
 
 model TicketHistory {

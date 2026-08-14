@@ -239,4 +239,18 @@ export class TicketsController {
   getHistory(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.ticketsService.getHistory(user, id);
   }
+
+  @RequireCsrf()
+  @Post(':id/watch')
+  @ApiOperation({ summary: 'Watch a ticket to get notified of new replies' })
+  watch(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.ticketsService.watch(user, id);
+  }
+
+  @RequireCsrf()
+  @Delete(':id/watch')
+  @ApiOperation({ summary: 'Stop watching a ticket' })
+  unwatch(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.ticketsService.unwatch(user, id);
+  }
 }

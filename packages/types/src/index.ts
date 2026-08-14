@@ -207,6 +207,7 @@ export interface TicketDetail {
   csatRating: number | null;
   csatComment: string | null;
   csatRatedAt: string | null;
+  isWatching: boolean;
 }
 
 export interface PaginatedResult<T> {

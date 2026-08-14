@@ -78,6 +78,7 @@ const TICKET_DETAIL_INCLUDE = {
   },
   mergedInto: { select: { id: true, number: true, subject: true } },
   splitFrom: { select: { id: true, number: true, subject: true } },
+  watchers: { select: { userId: true } },
 } satisfies Prisma.TicketInclude;
 
 type TicketWithDetail = Prisma.TicketGetPayload<{
@@ -650,6 +651,22 @@ export class TicketsService {
         });
       }
 
+      // Watchers are notified separately from the requester/assignee above, since a
+      // watcher may be neither (e.g. a manager keeping an eye on a ticket they don't own).
+      const watcherIds = ticket.watchers
+        .map((w) => w.userId)
+        .filter((id) => id !== user.id && id !== recipientId);
+      for (const watcherId of watcherIds) {
+        await this.notifications.create({
+          organizationId: user.organizationId,
+          userId: watcherId,
+          type: 'TICKET_REPLY',
+          title: `New reply on ticket #${ticket.number}`,
+          body: `${author.firstName} ${author.lastName} replied to "${ticket.subject}"`,
+          ticketId,
+        });
+      }
+
       // Sentiment is only meaningful as a read on the customer, not on an agent's own tone.
       if (!staff) {
         await this.aiQueue.add('comment-sentiment', {
@@ -1155,6 +1172,25 @@ export class TicketsService {
       csatRating: ticket.csatRating,
       csatComment: ticket.csatComment,
       csatRatedAt: ticket.csatRatedAt,
+      isWatching: ticket.watchers.some((w) => w.userId === user.id),
     };
+  }
+
+  async watch(user: AuthenticatedUser, ticketId: string) {
+    await this.getTicketOrThrow(user, ticketId, {});
+    await this.prisma.ticketWatcher.upsert({
+      where: { ticketId_userId: { ticketId, userId: user.id } },
+      create: { ticketId, userId: user.id },
+      update: {},
+    });
+    return this.findOne(user, ticketId);
+  }
+
+  async unwatch(user: AuthenticatedUser, ticketId: string) {
+    await this.getTicketOrThrow(user, ticketId, {});
+    await this.prisma.ticketWatcher.deleteMany({
+      where: { ticketId, userId: user.id },
+    });
+    return this.findOne(user, ticketId);
   }
 }
