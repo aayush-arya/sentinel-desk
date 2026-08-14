@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-patterns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -159,11 +159,7 @@ export default function WebhooksPage() {
       )}
 
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
+        <SkeletonList count={3} rowClassName="h-16 w-full" className="p-0" />
       ) : webhooks && webhooks.length > 0 ? (
         <div className="space-y-2">
           {webhooks.map((webhook) => (

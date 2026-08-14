@@ -9,6 +9,7 @@ import { useSlaDashboard, useSlaViolations } from '@/hooks/use-sla';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-patterns';
 import { TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-badges';
 
 const DASHBOARD_ROLES = ['SENIOR_AGENT', 'MANAGER', 'ADMIN'];
@@ -109,11 +110,7 @@ export default function SlaDashboardPage() {
         </CardHeader>
         <CardContent className="p-0">
           {violationsLoading ? (
-            <div className="space-y-2 p-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
+            <SkeletonList count={3} rowClassName="h-12 w-full" />
           ) : violations && violations.items.length > 0 ? (
             <div className="divide-y divide-border">
               {violations.items.map((ticket) => (

@@ -6,7 +6,7 @@ import { useLogoutAllOthers, useRevokeSession, useSessions } from '@/hooks/use-s
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-patterns';
 import { getApiErrorMessage } from '@/lib/api-client';
 
 export default function SessionsPage() {
@@ -49,8 +49,7 @@ export default function SessionsPage() {
       </div>
 
       <div className="space-y-3">
-        {isLoading &&
-          Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+        {isLoading && <SkeletonList count={2} rowClassName="h-20 w-full rounded-xl" className="p-0" />}
 
         {sessions?.map((session) => (
           <Card key={session.id}>

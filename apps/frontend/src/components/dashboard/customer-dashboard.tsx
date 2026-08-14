@@ -5,7 +5,8 @@ import { useTickets } from '@/hooks/use-tickets';
 import { useNotifications } from '@/hooks/use-notifications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-patterns';
+import { EmptyState } from '@/components/ui/empty-state';
 import { TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-badges';
 import { StatCard } from '@/components/dashboard/stat-card';
 
@@ -69,11 +70,7 @@ export function CustomerDashboard({ user }: { user: UserProfile }) {
           </CardHeader>
           <CardContent className="p-0">
             {recentTickets.isLoading ? (
-              <div className="space-y-2 p-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
+              <SkeletonList count={4} rowClassName="h-12 w-full" />
             ) : recentTickets.data && recentTickets.data.items.length > 0 ? (
               <div className="divide-y divide-border">
                 {recentTickets.data.items.map((ticket) => (
@@ -96,11 +93,19 @@ export function CustomerDashboard({ user }: { user: UserProfile }) {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2 p-10 text-center">
-                <TicketIcon className="size-8 text-muted-foreground" />
-                <p className="text-sm font-medium">No tickets yet</p>
-                <p className="text-sm text-muted-foreground">Create one if you need a hand with something.</p>
-              </div>
+              <EmptyState
+                icon={TicketIcon}
+                title="No tickets yet"
+                description="Create one if you need a hand with something."
+                action={
+                  <Button size="sm" asChild>
+                    <Link href="/dashboard/tickets/new">
+                      <Plus className="size-4" />
+                      New ticket
+                    </Link>
+                  </Button>
+                }
+              />
             )}
           </CardContent>
         </Card>
@@ -111,11 +116,7 @@ export function CustomerDashboard({ user }: { user: UserProfile }) {
           </CardHeader>
           <CardContent className="space-y-3 p-0">
             {notificationsLoading ? (
-              <div className="space-y-2 p-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
-              </div>
+              <SkeletonList count={3} rowClassName="h-10 w-full" />
             ) : notifications && notifications.items.length > 0 ? (
               <div className="divide-y divide-border">
                 {notifications.items.slice(0, 5).map((notification) => (
@@ -126,10 +127,7 @@ export function CustomerDashboard({ user }: { user: UserProfile }) {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2 p-8 text-center">
-                <Bell className="size-6 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">You&apos;re all caught up.</p>
-              </div>
+              <EmptyState icon={Bell} title="You're all caught up" size="compact" />
             )}
           </CardContent>
         </Card>

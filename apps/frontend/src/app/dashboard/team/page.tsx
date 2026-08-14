@@ -12,7 +12,7 @@ import { Avatar, AvatarBadge, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-patterns';
 import { InviteMemberDialog } from '@/components/dashboard/invite-member-dialog';
 import { canManageTeam, grantableRoles } from '@/lib/rbac';
 import { getApiErrorMessage } from '@/lib/api-client';
@@ -80,11 +80,7 @@ export default function TeamPage() {
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="space-y-2 p-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-14 w-full" />
-              ))}
-            </div>
+            <SkeletonList count={4} />
           ) : (
             <div className="divide-y divide-border">
               {members?.map((member) => {

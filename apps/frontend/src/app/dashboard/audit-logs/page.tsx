@@ -8,7 +8,7 @@ import { useAuditLogs } from '@/hooks/use-audit-logs';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-patterns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const ENTITY_TYPES = ['ALL', 'Ticket', 'User'];
@@ -66,11 +66,7 @@ export default function AuditLogsPage() {
 
       <Card className="overflow-hidden">
         {isLoading ? (
-          <div className="space-y-2 p-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
+          <SkeletonList count={8} rowClassName="h-12 w-full" />
         ) : data && data.items.length > 0 ? (
           <div className="divide-y divide-border">
             {data.items.map((entry) => (

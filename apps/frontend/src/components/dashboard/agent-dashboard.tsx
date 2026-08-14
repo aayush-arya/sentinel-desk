@@ -6,6 +6,8 @@ import { useSlaDashboard } from '@/hooks/use-sla';
 import { canViewSlaDashboard } from '@/lib/rbac';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-patterns';
+import { EmptyState } from '@/components/ui/empty-state';
 import { TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-badges';
 import { SlaCountdown } from '@/components/tickets/sla-countdown';
 import { StatCard } from '@/components/dashboard/stat-card';
@@ -99,11 +101,7 @@ export function AgentDashboard({ user }: { user: UserProfile }) {
           </CardHeader>
           <CardContent className="p-0">
             {myTickets.isLoading ? (
-              <div className="space-y-2 p-4">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-14 w-full" />
-                ))}
-              </div>
+              <SkeletonList count={5} />
             ) : sortedByUrgency.length > 0 ? (
               <div className="divide-y divide-border">
                 {sortedByUrgency.slice(0, 8).map((ticket) => (
@@ -128,11 +126,11 @@ export function AgentDashboard({ user }: { user: UserProfile }) {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2 p-10 text-center">
-                <CheckCircle2 className="size-8 text-emerald-500" />
-                <p className="text-sm font-medium">Nothing on your plate</p>
-                <p className="text-sm text-muted-foreground">Pick something up from the unassigned queue.</p>
-              </div>
+              <EmptyState
+                icon={CheckCircle2}
+                title="Nothing on your plate"
+                description="Pick something up from the unassigned queue."
+              />
             )}
           </CardContent>
         </Card>

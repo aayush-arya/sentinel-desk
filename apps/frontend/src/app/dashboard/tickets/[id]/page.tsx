@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonTicketDetail } from '@/components/ui/skeleton-patterns';
 import { TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-badges';
 import { CommentThread } from '@/components/tickets/comment-thread';
 import { ReplyComposer } from '@/components/tickets/reply-composer';
@@ -157,12 +158,7 @@ export default function TicketDetailPage() {
   })();
 
   if (isLoading || !ticket || !user) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-2/3" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
+    return <SkeletonTicketDetail />;
   }
 
   const isStaff = user.role.name !== 'CUSTOMER';

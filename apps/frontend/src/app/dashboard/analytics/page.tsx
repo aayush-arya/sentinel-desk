@@ -19,7 +19,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Download, Star } from 'lucide-react';
+import { ChartPie, Download, Star } from 'lucide-react';
 import { TICKET_PRIORITY_LABELS, TICKET_STATUS_LABELS } from '@sentinel-desk/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useAnalyticsOverview } from '@/hooks/use-analytics';
@@ -27,6 +27,8 @@ import { canViewSlaDashboard } from '@/lib/rbac';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonChart } from '@/components/ui/skeleton-patterns';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { API_BASE_URL } from '@/lib/api-client';
 
@@ -134,7 +136,7 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <Skeleton className="h-64 w-full" />
+            <SkeletonChart />
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={volume} margin={{ left: -20 }}>
@@ -167,7 +169,7 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <Skeleton className="h-64 w-full" />
+            <SkeletonChart />
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={responseTime} margin={{ left: -20 }}>
@@ -213,7 +215,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-56 w-full" />
+              <SkeletonChart className="h-56" />
             ) : statusBreakdown.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
@@ -227,7 +229,7 @@ export default function AnalyticsPage() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <p className="py-16 text-center text-sm text-muted-foreground">No tickets yet.</p>
+              <EmptyState icon={ChartPie} title="No tickets yet" size="compact" />
             )}
           </CardContent>
         </Card>
@@ -238,7 +240,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-56 w-full" />
+              <SkeletonChart className="h-56" />
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={priorityBreakdown} margin={{ left: -20 }}>

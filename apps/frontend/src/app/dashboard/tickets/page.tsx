@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-patterns';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-badges';
 import { KanbanBoard } from '@/components/tickets/kanban-board';
@@ -213,11 +214,7 @@ function TicketsPageContent() {
       ) : (
       <Card className="overflow-hidden">
         {isLoading ? (
-          <div className="space-y-2 p-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full" />
-            ))}
-          </div>
+          <SkeletonList count={5} />
         ) : data && data.items.length > 0 ? (
           <div className="divide-y divide-border">
             {data.items.map((ticket) => (
@@ -269,13 +266,21 @@ function TicketsPageContent() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2 p-12 text-center">
-            <MessageSquare className="size-8 text-muted-foreground" />
-            <p className="text-sm font-medium">No tickets found</p>
-            <p className="text-sm text-muted-foreground">
-              {staff ? 'Nothing matches these filters.' : 'Create a ticket if you need help with something.'}
-            </p>
-          </div>
+          <EmptyState
+            icon={MessageSquare}
+            title="No tickets found"
+            description={staff ? 'Nothing matches these filters.' : 'Create a ticket if you need help with something.'}
+            action={
+              !staff && (
+                <Button size="sm" asChild>
+                  <Link href="/dashboard/tickets/new">
+                    <Plus className="size-4" />
+                    New ticket
+                  </Link>
+                </Button>
+              )
+            }
+          />
         )}
       </Card>
       )}

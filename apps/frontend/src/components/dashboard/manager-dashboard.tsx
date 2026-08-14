@@ -6,6 +6,7 @@ import { useSlaDashboard, useSlaViolations } from '@/hooks/use-sla';
 import { useOrgMembers } from '@/hooks/use-team';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-patterns';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatCard } from '@/components/dashboard/stat-card';
 
@@ -103,11 +104,7 @@ export function ManagerDashboard({ user }: { user: UserProfile }) {
           </CardHeader>
           <CardContent className="p-0">
             {recentlyResolved.isLoading ? (
-              <div className="space-y-2 p-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
-              </div>
+              <SkeletonList count={4} rowClassName="h-10 w-full" />
             ) : leaderboard.length > 0 ? (
               <div className="divide-y divide-border">
                 {leaderboard.map((agent, i) => (

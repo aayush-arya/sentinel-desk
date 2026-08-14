@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '@/hooks/use-notifications';
 import { cn } from '@/lib/utils';
 
@@ -91,7 +92,7 @@ export function NotificationBell() {
               ))}
             </div>
           ) : (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">You&apos;re all caught up.</p>
+            <EmptyState icon={Bell} title="You're all caught up" size="compact" />
           )}
         </ScrollArea>
       </DropdownMenuContent>
