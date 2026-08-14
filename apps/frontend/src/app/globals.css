@@ -5,8 +5,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Z-index scale (Tailwind v4 has no built-in token for this, so it's documented
+ * here as the one source of truth instead of scattering arbitrary z-[N] values):
+ *   0   ambient background layer (orbs / grid / cursor glow) — components/background/*
+ *   10  page content (everything rendered inside <body>'s content wrapper)
+ *   20  sticky dashboard chrome (sidebar, topbar) — sits above content, below overlays
+ *   50  Radix-portaled overlays (dialog/dropdown/popover/sheet/tooltip) — their own defaults
+ */
+
 @theme inline {
   --color-background: var(--background);
+  --color-background-elevated: var(--background-elevated);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
@@ -50,7 +60,8 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
+  --background: oklch(0.985 0.003 264);
+  --background-elevated: oklch(0.97 0.005 264);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -87,10 +98,16 @@
   --brand-to: oklch(0.65 0.19 320);
   --glass-bg: oklch(1 0 0 / 60%);
   --glass-border: oklch(1 0 0 / 40%);
+  --orb-1: var(--brand-from);
+  --orb-2: var(--brand-via);
+  --orb-3: var(--brand-to);
+  --grid-line: oklch(0.145 0 0 / 5%);
+  --glow-color: oklch(0.6 0.19 280 / 14%);
 }
 
 .dark {
   --background: oklch(0.145 0 0);
+  --background-elevated: oklch(0.19 0.012 264);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
@@ -126,6 +143,11 @@
   --brand-to: oklch(0.55 0.2 320);
   --glass-bg: oklch(0.205 0 0 / 55%);
   --glass-border: oklch(1 0 0 / 8%);
+  --orb-1: var(--brand-from);
+  --orb-2: var(--brand-via);
+  --orb-3: var(--brand-to);
+  --grid-line: oklch(1 0 0 / 6%);
+  --glow-color: oklch(0.65 0.2 280 / 16%);
 }
 
 @layer base {
@@ -146,6 +168,31 @@
     border: 1px solid var(--glass-border);
     backdrop-filter: blur(16px) saturate(160%);
     -webkit-backdrop-filter: blur(16px) saturate(160%);
+  }
+
+  /* Lighter-touch translucency for persistent chrome (sidebar/topbar) that's on
+     screen at all times — less blur than .glass-panel so it stays legible and
+     cheap to repaint during scroll, while still letting the ambient background
+     read through faintly. */
+  .glass-chrome {
+    background: color-mix(in oklch, var(--background-elevated) 75%, transparent);
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+  }
+
+  /* Combined with bg-muted on the same element (see ui/skeleton.tsx) — the gradient
+     paints a soft highlight band over the muted base color and sweeps across it.
+     The highlight stop is a low-alpha mix of --foreground, not a full color, so
+     the sweep stays a subtle "sheen" rather than a bright bar. */
+  .animate-shimmer {
+    background-image: linear-gradient(
+      100deg,
+      transparent 30%,
+      color-mix(in oklch, var(--foreground) 10%, transparent) 50%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2.2s ease-in-out infinite;
   }
 
   .brand-gradient-text {
@@ -179,8 +226,18 @@
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: -150% 0;
+  }
+  100% {
+    background-position: 150% 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animated-mesh-bg {
+  .animated-mesh-bg,
+  .animate-shimmer {
     animation: none;
   }
 }

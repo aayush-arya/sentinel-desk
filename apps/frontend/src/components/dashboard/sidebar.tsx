@@ -45,7 +45,7 @@ export function DashboardSidebar({ user }: { user: UserProfile }) {
   return (
     <aside
       className={cn(
-        'hidden shrink-0 flex-col border-r border-border bg-sidebar transition-[width] duration-200 md:flex',
+        'glass-chrome relative z-20 hidden shrink-0 flex-col border-r border-border/60 transition-[width] duration-200 md:flex',
         collapsed ? 'w-16' : 'w-60',
       )}
     >

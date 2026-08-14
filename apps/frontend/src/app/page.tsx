@@ -72,7 +72,6 @@ export default function LandingPage() {
       </header>
 
       <section className="relative overflow-hidden px-6 py-24 md:py-32">
-        <div className="animated-mesh-bg pointer-events-none absolute inset-0 -z-10" />
         <div className="mx-auto max-w-3xl text-center">
           <div className="mx-auto mb-6 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
             <ShieldCheck className="size-3.5" />
